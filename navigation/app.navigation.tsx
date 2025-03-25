@@ -17,6 +17,8 @@ import ClassroomScreen from "../component/DetailClass";
 import DetailClassroom from "../component/DetailClass";
 import EveryOneScreen from "../component/EveryOne";
 import EditNotifyScreen from "../component/EditNotify";
+import LoginDetail from "../component/LoginDetail";
+import SignUpDetail from "../component/SignUpDetail";
 
 const HomeLayout = () => {
 const Stack = createNativeStackNavigator();
@@ -101,6 +103,16 @@ const Stack = createNativeStackNavigator();
                 <Stack.Screen
                     name="EditNotifyScreen"
                     component={EditNotifyScreen}
+                    options={{ headerShown: false }}
+                />
+                 <Stack.Screen
+                    name="LoginDetail"
+                    component={LoginDetail}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="SignUpDetail"
+                    component={SignUpDetail}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>

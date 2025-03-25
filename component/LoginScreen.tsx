@@ -17,13 +17,16 @@ export default function LoginScreen(props: any) {
         <Text style={styles.description}><FontAwesome style={styles.icon} name="lightbulb-o" size={20} color="black" /> Quản lý lớp học thông minh – Học tập không giới hạn!</Text>
         <Text style={styles.description}><FontAwesome style={styles.icon} name="book" size={16} color="black" /> Kết nối lớp học, nâng cao trải nghiệm học tập!</Text>
         <Text style={styles.description}><FontAwesome6 style={styles.icon} name="earth-americas" size={16} color="black" /> Học tập dễ dàng, mọi lúc mọi nơi!</Text>
+        
+            <TouchableOpacity style={styles.googleButton} onPress={()=> navigation.navigate("LoginDetail")}>
+              <Text style={styles.googleText}>Đăng nhập</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.googleButton} onPress={()=> navigation.navigate("SignUpDetail")}>
+              <Text style={styles.googleText}>Đăng ký</Text>
+            </TouchableOpacity>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.googleButton} onPress={()=> navigation.navigate("ClassroomList")}>
-        <Image source={require('../assets/images/googleicon.png')} style={styles.googleIcon} />
-        <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -40,13 +43,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     width: "100%",
     height: 550,
-    backgroundColor: '#FFFCF3',
+    backgroundColor: '#fff',
     alignItems: 'center',
     shadowColor: '#000',
     borderRadius: 10,
   },
   carddescription: {
-
+    width: '100%'
   },
   icon: {
     display: 'flex',
@@ -54,8 +57,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   image: {
-    width: 300,
-    height: 300,
+    width: 200,
+    height: 200,
     marginBottom: 10,
   },
   title: {
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
   },
   description: {
     marginBottom: 20,
-    fontSize: 16,
+    fontSize: 14,
     color: '#444',
     display: 'flex',
     alignItems: 'center',
@@ -79,6 +82,7 @@ const styles = StyleSheet.create({
     fontWeight: 600
   },
   googleButton: {
+
     width: "100%",
     alignItems: 'center',
     justifyContent: 'center',
@@ -101,7 +105,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontFamily: "Nunito_400Regular",
-    fontWeight: 600
+    fontWeight: 'semibold'
 
   },
 });
