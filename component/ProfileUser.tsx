@@ -1,11 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import Header from './Header';
 
 const ProfileSettingsScreen = () => {
-      const navigation = useNavigation();
+  const navigation = useNavigation();
+  const [user, setUser] = useState({ fullname: "Tên người dùng", email: "Email" });
+
+  useEffect(() => {
+      const fetchUserData = async () => {
+          try {
+              const userData = await AsyncStorage.getItem('user');
+              if (userData) {
+                  setUser(JSON.parse(userData));
+              }
+          } catch (error) {
+              console.error("Lỗi khi lấy dữ liệu user:", error);
+          }
+      };
+      fetchUserData();
+  }, []);
     
   return (
     <View style={styles.containersmall}>
@@ -14,9 +30,9 @@ const ProfileSettingsScreen = () => {
       <View style={styles.box}>
       <Image style={styles.avatar} source={require("../assets/images/usernobackgr.jpg")} />
 
-        <Text style={styles.name}>Võ Hoàng Thành</Text>
-        <Text style={styles.email}>youremail@domain.com</Text>
-        <Text style={styles.switchAccount}>Chuyển đổi tài khoản</Text>
+                <Text style={styles.name}>{user.fullname}</Text>
+                <Text style={styles.email}>{user.email}</Text>
+                <Text style={styles.switchAccount}>Chuyển đổi tài khoản</Text>
 
         <View style={styles.card}>
           <TouchableOpacity style={styles.row}>
@@ -24,10 +40,16 @@ const ProfileSettingsScreen = () => {
             <Text style={styles.rowText}>Trợ giúp</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.row}>
-            <Ionicons name="log-out-outline" size={20} color="#333" />
-            <Text style={styles.rowText}>Đăng xuất</Text>
-          </TouchableOpacity>
+         
+      <TouchableOpacity style={styles.row} onPress={async () => {
+          await AsyncStorage.removeItem('token'); // Xóa token đã lưu trong AsyncStorage
+          await AsyncStorage.removeItem('user');  // Xóa thông tin user đã lưu
+          navigation.navigate('LogOut'); // Chuyển hướng người dùng về màn hình đăng nhập
+      }}>
+          <Ionicons name="log-out-outline" size={20} color="#333" />
+          <Text style={styles.rowText}>Đăng xuất</Text>
+      </TouchableOpacity>
+
       </View>
       </View>
 
@@ -55,8 +77,8 @@ const styles = StyleSheet.create({
   },
   backIcon: { position: 'absolute', top: 100, left: 20 },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 10 },
-  name: { fontSize: 22, fontWeight: 'bold', color: '#fff',fontFamily: "Nunito_400Regular", },
-  email: { fontSize: 16, color: '#ddd' , fontFamily: "Nunito_400Regular",},
+  name: { fontSize: 22, fontWeight: 'bold', color: '#000',fontFamily: "Nunito_400Regular", },
+  email: { fontSize: 16, color: '#000' , fontFamily: "Nunito_400Regular",},
   switchAccount: { fontSize: 14, color: '#0641F0', marginVertical: 8,fontFamily: "Nunito_400Regular", },
   card: { width: '90%', backgroundColor: '#fff', borderRadius: 10, marginVertical: 10, paddingVertical: 10 },
   row: { 
