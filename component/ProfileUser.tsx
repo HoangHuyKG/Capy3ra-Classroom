@@ -32,7 +32,7 @@ const ProfileSettingsScreen = () => {
 
                 <Text style={styles.name}>{user.fullname}</Text>
                 <Text style={styles.email}>{user.email}</Text>
-                <Text style={styles.switchAccount}>Chuyển đổi tài khoản</Text>
+                
 
         <View style={styles.card}>
           <TouchableOpacity style={styles.row}>

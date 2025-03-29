@@ -33,7 +33,7 @@ const SignUpDetail = (props: any) => {
   
       if (response.status === 201) {
         Alert.alert('Thành công', 'Đăng ký thành công!');
-        navigation.navigate('ClassroomList');
+        navigation.navigate('LoginDetail');
       } else {
         Alert.alert('Lỗi', data.message || 'Có lỗi xảy ra!');
       }
@@ -43,46 +43,7 @@ const SignUpDetail = (props: any) => {
   };
   
   
-  // const handleSignUp = async () => {
-  //   if (!fullname || !email || !password || !confirmPassword) {
-  //     Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin!');
-  //     return;
-  //   }
   
-  //   if (password.length < 8) {
-  //     Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 8 ký tự!');
-  //     return;
-  //   }
-  
-  //   if (password !== confirmPassword) {
-  //     Alert.alert('Lỗi', 'Mật khẩu nhập lại không khớp!');
-  //     return;
-  //   }
-  
-  //   // 🔒 Mã hóa mật khẩu bằng AES
-  //   const encryptedPassword = CryptoJS.AES.encrypt(password, "SECRET_KEY").toString();
-  
-  //   try {
-  //     const response = await fetch('http://10.0.2.2:3000/signup', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       },
-  //       body: JSON.stringify({ fullname, email, password: encryptedPassword })
-  //     });
-  
-  //     const data = await response.json();
-  
-  //     if (response.status === 201) {
-  //       Alert.alert('Thành công', 'Đăng ký thành công!');
-  //       navigation.navigate('ClassroomList');
-  //     } else {
-  //       Alert.alert('Lỗi', data.message || 'Có lỗi xảy ra!');
-  //     }
-  //   } catch (error) {
-  //     Alert.alert('Lỗi', 'Không thể kết nối đến server!');
-  //   }
-  // };
   
   return (
     <View style={styles.container}>
