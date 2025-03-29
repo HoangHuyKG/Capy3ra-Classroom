@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import { Menu, Divider, Provider } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from './Header';
 import FooterBar from '../navigation/FooterBar';
 import Entypo from '@expo/vector-icons/Entypo';
-import { useRoute } from '@react-navigation/native';
+import axios from 'axios';
 
-
+// Mock dữ liệu thông báo
 const notifications = [
     { id: '1', text: 'Thứ 2 thi giữa kỳ' },
     { id: '2', text: 'Thứ 3 nộp bài tập nhóm' },
@@ -20,17 +20,55 @@ const notifications = [
 const DetailClassroom = () => {
     const route = useRoute();
     const activeTab = route.params?.activeTab || 'message'; 
+    const classId = route.params?.classId;
 
     const navigation = useNavigation();
+    const [classData, setClassData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [visibleMenu, setVisibleMenu] = useState(null); // ID của menu đang mở
+
+    useEffect(() => {
+        if (classId) {
+            fetchClassDetails();
+        }
+    }, [classId]);
+
+    const fetchClassDetails = async () => {
+        try {
+            const response = await axios.get(`http://10.0.2.2:3000/class/${classId}`); // Thay localhost bằng IP máy thật
+            setClassData(response.data);
+        } catch (error) {
+            console.error("❌ Lỗi khi lấy dữ liệu lớp học:", error);
+            setError("Không thể tải dữ liệu lớp học.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const openMenu = (id) => setVisibleMenu(id);
     const closeMenu = () => setVisibleMenu(null);
-
     const handleMenuItemPress = (action, id) => {
         console.log(`${action} ${id}`);
-        closeMenu(); // Đóng menu sau khi chọn
+        closeMenu(); 
     };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007bff" />
+                <Text>Đang tải...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
+        );
+    }
 
     return (
         <Provider>
@@ -38,21 +76,24 @@ const DetailClassroom = () => {
                 <Header />
                 <View style={styles.containersmall}>
                     <ImageBackground
-                        source={{ uri: 'https://picsum.photos/800/600?random=58' }}
+                        source={{ uri: classData?.imageUrl || 'https://via.placeholder.com/800x600' }}
                         style={styles.card}
                         imageStyle={{ borderRadius: 10 }}
                     >
                         <View style={styles.boxtext}>
-                            <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">Lập trình di động</Text>
+                            <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+                                {classData?.name || "Không có tên"}
+                            </Text>
                         </View>
                     </ImageBackground>
 
                     <View style={styles.notify}>
                         <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.jpg")} />
-                        <TouchableOpacity onPress={() => navigation.navigate("PostNotificationScreen")}>
+                        <TouchableOpacity onPress={() => navigation.navigate("PostNotificationScreen", { classId })}>
                             <Text style={styles.notifytext}>Thông báo tin gì đó cho lớp</Text>
                         </TouchableOpacity>
                     </View>
+
 
                     <FlatList
                         nestedScrollEnabled={true}
