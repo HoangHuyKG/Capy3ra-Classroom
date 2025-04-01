@@ -1,5 +1,5 @@
     import React, { useState, useEffect } from 'react';
-    import { View, Text, StyleSheet, FlatList, ImageBackground, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+    import { View, Text, StyleSheet, FlatList, ImageBackground, TouchableOpacity, ActivityIndicator, Alert, Modal,TouchableWithoutFeedback  } from 'react-native';
     import AsyncStorage from '@react-native-async-storage/async-storage';
     import axios from 'axios';
     import Feather from '@expo/vector-icons/Feather';
@@ -9,7 +9,7 @@
     const ClassroomList = ({ navigation }) => {
         const [classes, setClasses] = useState([]);
         const [loading, setLoading] = useState(true);
-
+        const [modalVisible, setModalVisible] = useState(false);
         useEffect(() => {
             const fetchClasses = async () => {
                 try {
@@ -74,9 +74,32 @@
                         </TouchableOpacity>
                     )}
                 />
-                <TouchableOpacity style={styles.addclass} onPress={() => navigation.navigate("CreateClassScreen")}>
-                    <Fontisto name="plus-a" size={18} color="#0641F0" />
-                </TouchableOpacity>
+            <TouchableOpacity style={styles.addclass} onPress={() => setModalVisible(true)}>
+                <Fontisto name="plus-a" size={18} color="#0641F0" />
+            </TouchableOpacity>
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)} 
+            >
+                <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+                    <View style={styles.overlay}>
+                        <TouchableWithoutFeedback onPress={() => { }}>
+                            <View style={styles.modalContainer}>
+                           
+                                <TouchableOpacity style={styles.option} onPress={()=>navigation.navigate("CreateClassScreen")}>
+                                    <Text style={styles.optionText}>Tạo lớp học</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.option} onPress={()=>navigation.navigate("JoinClassScreen")}>
+                                    <Text style={styles.optionText}>Tham gia lớp học</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+                
             </View>
         );
     };
@@ -89,6 +112,24 @@
         cardTitle: { fontSize: 20, color: "#fff", fontWeight: 'bold' },
         dropdownText: { color: '#fff', fontSize: 14 },
         dotedit: { position: 'absolute', right: 10, top: 10 },
+        overlay: {
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "rgba(0,0,0,0.5)",
+        },
+        modalContainer: {
+            backgroundColor: "#fff",
+            borderTopLeftRadius: 10,
+            borderTopRightRadius: 10,
+            padding: 20,
+        },
+        option: {
+            paddingVertical: 15,
+        },
+        optionText: {
+            fontSize: 18,
+            fontFamily: "Nunito_400Regular",
+        },
         addclass: { position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', bottom: 20, right: 20, elevation: 5 }
     });
 
