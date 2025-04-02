@@ -27,10 +27,6 @@ const JoinClassScreen = (props) => {
 
       <View style={styles.containerchild}>
 
-
-
-
-
         <Text style={styles.instruction}>Hỏi giáo viên của bạn để biết mã lớp, mật khẩu rồi nhập vào bên dưới.</Text>
 
         <Text style={styles.label}>Mã Lớp</Text>

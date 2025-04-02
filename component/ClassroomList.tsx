@@ -179,15 +179,7 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontFamily: "Nunito_400Regular",
     },
-    cardTitle: {
-        width: '90%',
-        fontSize: 24,
-        marginTop: 10,
-        fontWeight: '700',
-        marginBottom: 40,
-        color: "#fff",
-        fontFamily: "Nunito_400Regular",
-    },
+
     cardFooter: {
         flexDirection: 'row',
         alignItems: 'center',
