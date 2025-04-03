@@ -76,9 +76,6 @@ const CustomModalMenu = ({ visible, onClose }) => {
                         </View>
                     </View>
 
-                    <TouchableOpacity>
-                        <Text style={styles.switchAccount}>Chuyển đổi tài khoản</Text>
-                    </TouchableOpacity>
                 </Animated.View>
 
                 <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}></TouchableOpacity>

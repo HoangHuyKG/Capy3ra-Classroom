@@ -1,49 +1,85 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-
+import CryptoJS from "react-native-crypto-js";
 const SignUpDetail = (props: any) => {
+  const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const {navigation} = props;
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const { navigation } = props;
+  
 
-
+  const handleSignUp = async () => {
+    if (!fullname || !email || !password || !confirmPassword) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin!');
+      return;
+    }
+  
+    if (password !== confirmPassword) {
+      Alert.alert('Lỗi', 'Mật khẩu nhập lại không khớp!');
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://10.0.2.2:3000/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fullname, email, password })  
+      });
+  
+      const data = await response.json();
+  
+      if (response.status === 201) {
+        Alert.alert('Thành công', 'Đăng ký thành công!');
+        navigation.navigate('LoginDetail');
+      } else {
+        Alert.alert('Lỗi', data.message || 'Có lỗi xảy ra!');
+      }
+    } catch (error) {
+      Alert.alert('Lỗi', 'Không thể kết nối đến server!');
+    }
+  };
+  
+  
+  
+  
   return (
     <View style={styles.container}>
-        <View style={styles.containersmall}>
-
-            <Text style={styles.title}>Đăng ký</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Họ tên"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Email"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Mật khẩu"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Nhập lại Mật khẩu"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
-            <TouchableOpacity style={styles.button} onPress={()=>navigation.navigate("ClassroomList")}>
-                <Text style={styles.buttonText}>Đăng ký</Text>
-            </TouchableOpacity>
-        </View>
+      <View style={styles.containersmall}>
+        <Text style={styles.title}>Đăng ký</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Họ tên"
+          value={fullname}
+          onChangeText={setFullname}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Mật khẩu"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Nhập lại Mật khẩu"
+          secureTextEntry
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+        <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+          <Text style={styles.buttonText}>Đăng ký</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -54,7 +90,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 10,
-
   },
   containersmall: {
     width: '100%',
@@ -70,7 +105,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    fontFamily: "Nunito_400Regular",
     textAlign: 'center'
   },
   input: {
@@ -81,23 +115,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 10,
     paddingVertical: 15,
-    fontFamily: "Nunito_400Regular",
-
   },
   button: {
     backgroundColor: '#0641F0',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
-    color: '#fff'
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: "Nunito_400Regular",
     textAlign: 'center'
-
   },
 });
 

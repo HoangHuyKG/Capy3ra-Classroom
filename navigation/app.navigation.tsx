@@ -19,7 +19,7 @@ import EveryOneScreen from "../component/EveryOne";
 import EditNotifyScreen from "../component/EditNotify";
 import LoginDetail from "../component/LoginDetail";
 import SignUpDetail from "../component/SignUpDetail";
-
+import LogOut from "../component/LoginScreen";
 const HomeLayout = () => {
 const Stack = createNativeStackNavigator();
 
@@ -113,6 +113,11 @@ const Stack = createNativeStackNavigator();
                 <Stack.Screen
                     name="SignUpDetail"
                     component={SignUpDetail}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="LogOut"
+                    component={LogOut}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>

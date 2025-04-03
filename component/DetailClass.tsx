@@ -1,36 +1,84 @@
-import React, { useState } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import { Menu, Divider, Provider } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from './Header';
 import FooterBar from '../navigation/FooterBar';
 import Entypo from '@expo/vector-icons/Entypo';
-import { useRoute } from '@react-navigation/native';
+import axios from 'axios';
 
 
-const notifications = [
-    { id: '1', text: 'Thứ 2 thi giữa kỳ' },
-    { id: '2', text: 'Thứ 3 nộp bài tập nhóm' },
-    { id: '3', text: 'Thứ 4 có tiết học trực tuyến' },
-    { id: '4', text: 'Thứ 5 deadline báo cáo thực hành' },
-    { id: '5', text: 'Thứ 6 kiểm tra giữa kỳ' },
-    { id: '6', text: 'Thứ 7 họp nhóm dự án' },
-];
 
 const DetailClassroom = () => {
     const route = useRoute();
-    const activeTab = route.params?.activeTab || 'message'; 
+    const activeTab = route.params?.activeTab || 'message';
+    const classId = route.params?.classId;
 
     const navigation = useNavigation();
+    const [classData, setClassData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [visibleMenu, setVisibleMenu] = useState(null); // ID của menu đang mở
+    const [notifications, setNotifications] = useState([]); // Thay đổi từ mock data
+    const [refreshing, setRefreshing] = useState(false);
 
+
+    useEffect(() => {
+        setLoading(true); // Reset loading về true khi component được mount
+        if (classId) {
+            fetchClassDetails();
+            fetchNotifications(); // Gọi hàm để lấy thông báo
+        }
+    }, [classId]);
+    const fetchNotifications = async () => {
+        try {
+            const response = await axios.get(`http://192.168.1.6:3000/notifications/class/${classId}`); // Thay localhost bằng IP máy thật
+            setNotifications(response.data); // Giả sử response.data là mảng thông báo
+        } catch (error) {
+            console.error("❌ Lỗi khi lấy dữ liệu thông báo:", error);
+            setError("Không thể tải dữ liệu thông báo.");
+        }
+    };
+    const fetchClassDetails = async () => {
+        try {
+            const response = await axios.get(`http://192.168.1.6:3000/class/${classId}`); // Thay localhost bằng IP máy thật
+            setClassData(response.data);
+        } catch (error) {
+            console.error("❌ Lỗi khi lấy dữ liệu lớp học:", error);
+            setError("Không thể tải dữ liệu lớp học.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchClassDetails(); // Gọi lại hàm để lấy thông tin lớp học
+        await fetchNotifications(); // Gọi lại hàm để lấy thông báo
+        setRefreshing(false);
+    };
     const openMenu = (id) => setVisibleMenu(id);
     const closeMenu = () => setVisibleMenu(null);
-
     const handleMenuItemPress = (action, id) => {
         console.log(`${action} ${id}`);
-        closeMenu(); // Đóng menu sau khi chọn
+        closeMenu();
     };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007bff" />
+                <Text>Đang tải...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
+        );
+    }
 
     return (
         <Provider>
@@ -38,55 +86,67 @@ const DetailClassroom = () => {
                 <Header />
                 <View style={styles.containersmall}>
                     <ImageBackground
-                        source={{ uri: 'https://picsum.photos/800/600?random=58' }}
+                        source={{ uri: classData?.imageUrl || 'https://via.placeholder.com/800x600' }}
                         style={styles.card}
                         imageStyle={{ borderRadius: 10 }}
                     >
                         <View style={styles.boxtext}>
-                            <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">Lập trình di động</Text>
+                            <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+                                {classData?.name || "Không có tên"}
+                            </Text>
                         </View>
                     </ImageBackground>
 
                     <View style={styles.notify}>
                         <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.jpg")} />
-                        <TouchableOpacity onPress={() => navigation.navigate("PostNotificationScreen")}>
+                        <TouchableOpacity onPress={() => navigation.navigate("PostNotificationScreen", { classId })}>
                             <Text style={styles.notifytext}>Thông báo tin gì đó cho lớp</Text>
                         </TouchableOpacity>
                     </View>
+
 
                     <FlatList
                         nestedScrollEnabled={true}
                         contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }}
                         data={notifications}
-                        keyExtractor={(item) => item.id}
+                        keyExtractor={(item) => item._id ? item._id.toString() : Math.random().toString()}
                         renderItem={({ item }) => (
                             <View style={styles.cardtach}>
                                 <View style={styles.cardtop}>
                                     <View style={styles.cardtopa}>
                                         <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.jpg")} />
-                                        <Text style={styles.textcardname}>Hoàng Gia Huy</Text>
+                                        <Text style={styles.textcardname}>{item.userName ?? "Người dùng"}</Text>
                                     </View>
                                     <Menu
                                         contentStyle={styles.menu}
-                                        visible={visibleMenu === item.id}
+                                        visible={visibleMenu === item._id}
                                         onDismiss={closeMenu}
                                         anchor={
-                                            <TouchableOpacity onPress={() => openMenu(item.id)}>
+                                            <TouchableOpacity onPress={() => openMenu(item._id)}>
                                                 <Entypo name="dots-three-vertical" size={24} color="#5f6368" />
                                             </TouchableOpacity>
                                         }
                                     >
-                                        <Menu.Item onPress={() => navigation.navigate("EditNotifyScreen")} title="Chỉnh sửa" />
+                                        <Menu.Item onPress={() => navigation.navigate("EditNotifyScreen", { notificationId: item._id })} title="Chỉnh sửa" />
                                         <Divider />
-                                        <Menu.Item onPress={() => handleMenuItemPress("Xóa", item.id)} title="Xóa" />
+                                        <Menu.Item onPress={() => handleMenuItemPress("Xóa", item._id)} title="Xóa" />
                                     </Menu>
                                 </View>
-                                <Text style={styles.textcard}>{item.text}</Text>
+                                <View>
+                                    <Text style={styles.textcard}>{item.content}</Text>
+                                </View>
+                                {item.fileUrl && Array.isArray(item.fileUrl) && item.fileUrl.length > 0 && (
+                                    <TouchableOpacity onPress={() => { }}>
+                                        <Text style={styles.fileLink}>Tệp đính kèm: {item.fileUrl[0].split('\\').pop()}</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         )}
+                        refreshing={refreshing} // Thêm thuộc tính refreshing
+                        onRefresh={onRefresh} // Thêm hàm onRefresh
                     />
                 </View>
-                 <FooterBar activeTab={activeTab} />
+                <FooterBar activeTab={activeTab} />
             </View>
         </Provider>
     );
@@ -119,8 +179,8 @@ const styles = StyleSheet.create({
         fontFamily: "Nunito_400Regular",
     },
     boxtext: {
-        position: "absolute",  
-        bottom: 10,            
+        position: "absolute",
+        bottom: 10,
         paddingVertical: 5,
         paddingHorizontal: 15,
         borderRadius: 5,
@@ -151,6 +211,17 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 5,
+    },
+    fileLink: {
+        marginTop: 5,
+        fontSize: 14,
+        color: '#0641F0', // Màu sắc cho liên kết
+        textDecorationLine: 'underline', // Gạch chân để hiển thị như một liên kết
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
     }
 });
 
