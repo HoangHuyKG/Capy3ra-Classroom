@@ -6,7 +6,7 @@ import Header from './Header';
 import FooterBar from '../navigation/FooterBar';
 import Entypo from '@expo/vector-icons/Entypo';
 import axios from 'axios';
-
+import { Alert } from 'react-native';
 
 
 const DetailClassroom = () => {
@@ -32,7 +32,7 @@ const DetailClassroom = () => {
     }, [classId]);
     const fetchNotifications = async () => {
         try {
-            const response = await axios.get(`http://192.168.1.6:3000/notifications/class/${classId}`); // Thay localhost bằng IP máy thật
+            const response = await axios.get(`http://10.0.2.2:3000/notifications/class/${classId}`); // Thay localhost bằng IP máy thật
             setNotifications(response.data); // Giả sử response.data là mảng thông báo
         } catch (error) {
             console.error("❌ Lỗi khi lấy dữ liệu thông báo:", error);
@@ -41,7 +41,7 @@ const DetailClassroom = () => {
     };
     const fetchClassDetails = async () => {
         try {
-            const response = await axios.get(`http://192.168.1.6:3000/class/${classId}`); // Thay localhost bằng IP máy thật
+            const response = await axios.get(`http://10.0.2.2:3000/class/${classId}`); // Thay localhost bằng IP máy thật
             setClassData(response.data);
         } catch (error) {
             console.error("❌ Lỗi khi lấy dữ liệu lớp học:", error);
@@ -59,9 +59,34 @@ const DetailClassroom = () => {
     const openMenu = (id) => setVisibleMenu(id);
     const closeMenu = () => setVisibleMenu(null);
     const handleMenuItemPress = (action, id) => {
-        console.log(`${action} ${id}`);
-        closeMenu();
+        if (action === "Xóa") {
+            Alert.alert(
+                "Xác nhận xóa",
+                "Bạn có chắc chắn muốn xóa thông báo này?",
+                [
+                    { text: "Hủy", style: "cancel" },
+                    { text: "Xóa", onPress: () => deleteNotification(id) }
+                ]
+            );
+        } else {
+            closeMenu();
+        }
     };
+    
+    const deleteNotification = async (id) => {
+      
+
+        try {
+            await axios.delete(`http://10.0.2.2:3000/notifications/${id}`);
+            await fetchNotifications();
+             Alert.alert("Thành công", "Lớp học đã bị xóa!");
+        } catch (error) {
+            console.error("❌ Lỗi khi xóa thông báo:", error);
+        } finally {
+            closeMenu();
+        }
+    };
+    
 
     if (loading) {
         return (
@@ -146,7 +171,7 @@ const DetailClassroom = () => {
                         onRefresh={onRefresh} // Thêm hàm onRefresh
                     />
                 </View>
-                <FooterBar activeTab={activeTab} />
+                <FooterBar activeTab={activeTab} classId={classId} />
             </View>
         </Provider>
     );

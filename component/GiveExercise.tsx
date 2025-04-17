@@ -1,26 +1,34 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { Menu, Provider } from 'react-native-paper';
 import Header from './Header';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FooterBar from '../navigation/FooterBar';
 import Fontisto from '@expo/vector-icons/Fontisto';
 import Entypo from '@expo/vector-icons/Entypo';
 import { useRoute } from '@react-navigation/native';
+import axios from 'axios';
 
 const GiveExercise = ({ navigation }) => {
     const route = useRoute();
     const activeTab = route.params?.activeTab || 'clipboard';
     const [menuVisible, setMenuVisible] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
+    const classId = route.params?.classId; // Nhận classId từ params
+    const [exercises, setExercises] = useState([]); // State để lưu danh sách bài tập
 
-    const data = Array.from({ length: 11 }, (_, i) => ({
-        id: i.toString(),
-        title: `Bài tập ${i + 1}`,
-        date: `Ngày đăng: 12:00, ${i + 1} tháng 1, 2025`
-    }));
+    useEffect(() => {
+        const fetchExercises = async () => {
+            try {
+                const response = await axios.get(`http://10.0.2.2:3000/exercises/class/${classId}`);
+                setExercises(response.data); // Lưu danh sách bài tập vào state
+            } catch (error) {
+                console.error("Lỗi khi lấy bài tập:", error);
+            }
+        };
+
+        fetchExercises();
+    }, [classId]); // Gọi lại khi classId thay đổi
 
     const openMenu = (item) => {
         setSelectedItem(item);
@@ -31,6 +39,17 @@ const GiveExercise = ({ navigation }) => {
         setMenuVisible(false);
     };
 
+    const handleDeleteExercise = async (id) => {
+        try {
+            await axios.delete(`http://10.0.2.2:3000/exercises/${id}`);
+            setExercises(exercises.filter(exercise => exercise._id !== id)); // Cập nhật danh sách bài tập
+            Alert.alert("Thành công", "Bài tập đã được xóa thành công!");
+        } catch (error) {
+            console.error("Lỗi khi xóa bài tập:", error);
+            Alert.alert("Lỗi", "Không thể xóa bài tập. Vui lòng thử lại.");
+        }
+    };
+
     return (
         <Provider>
             <View style={styles.container}>
@@ -38,8 +57,8 @@ const GiveExercise = ({ navigation }) => {
                 <View style={styles.containersmall}>
                     <FlatList
                         contentContainerStyle={{ flexGrow: 1, paddingBottom: 130 }}
-                        data={data}
-                        keyExtractor={(item) => item.id}
+                        data={exercises} // Sử dụng danh sách bài tập từ state
+                        keyExtractor={(item) => item._id} // Sử dụng _id làm key
                         renderItem={({ item }) => (
                             <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("AssignmentScreen")}> 
                                 <View style={styles.cardheader}>
@@ -47,11 +66,11 @@ const GiveExercise = ({ navigation }) => {
                                 </View>
                                 <View>
                                     <Text style={styles.cardheadertitle}>{item.title}</Text>
-                                    <Text style={styles.cardheadertext}>{item.date}</Text>
-                                </View>
+                                    <Text style={styles.cardheadertext}>{`Ngày đăng: ${new Date(item.createdAt).toLocaleString()}`}</Text>
+                                    </View>
                                 <Menu
                                     contentStyle={styles.menu}
-                                    visible={menuVisible && selectedItem?.id === item.id}
+                                    visible={menuVisible && selectedItem?._id === item._id}
                                     onDismiss={closeMenu}
                                     anchor={
                                         <TouchableOpacity onPress={() => openMenu(item)}>
@@ -59,17 +78,41 @@ const GiveExercise = ({ navigation }) => {
                                         </TouchableOpacity>
                                     }
                                 >
-                                    <Menu.Item onPress={() => { closeMenu(); navigation.navigate("EditExercise"); }} title="Chỉnh sửa" icon="pencil-outline" />
-                                    <Menu.Item onPress={closeMenu} title="Xóa" icon="trash-can-outline" />
+                                    <Menu.Item 
+                                        onPress={() => {
+                                            closeMenu(); 
+                                            navigation.navigate("EditExercise", { exerciseId: item._id }); // Truyền exerciseId vào
+                                        }} 
+                                        title="Chỉnh sửa" 
+                                        icon="pencil-outline" 
+                                    />
+                                    <Menu.Item 
+                                        onPress={() => {
+                                            closeMenu();
+                                            Alert.alert(
+                                                "Xác nhận xóa",
+                                                "Bạn có chắc chắn muốn xóa bài tập này?",
+                                                [
+                                                    { text: "Hủy", style: "cancel" },
+                                                    { text: "Xóa", onPress: () => handleDeleteExercise(item._id) }
+                                                ]
+                                            );
+                                        }} 
+                                        title="Xóa" 
+                                        icon="trash-can-outline" 
+                                    />
                                 </Menu>
                             </TouchableOpacity>
                         )}
                     />
                 </View>
-                <TouchableOpacity style={styles.buttonAdd} onPress={() => navigation.navigate("DetailExercise")}> 
+                <TouchableOpacity 
+                    style={styles.buttonAdd} 
+                    onPress={() => navigation.navigate("DetailExercise", { classId })} // Truyền classId
+                > 
                     <Fontisto name="plus-a" size={18} color="#0641F0" />
                 </TouchableOpacity>
-                <FooterBar activeTab={activeTab} />
+                <FooterBar activeTab={activeTab} classId={classId} />
             </View>
         </Provider>
     );

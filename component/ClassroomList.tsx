@@ -31,7 +31,7 @@
                     const userId = user._id;
                    
 
-                    const response = await axios.get(`http://192.168.1.6:3000/classes/${userId}`);
+                    const response = await axios.get(`http://10.0.2.2:3000/classes/${userId}`);
 
                     setClasses(response.data); // Gán danh sách lớp học vào state
                 }  finally {

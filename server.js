@@ -298,7 +298,276 @@ app.get('/notifications/class/:classId', async (req, res) => {
         res.status(500).json({ message: "Lỗi server!" });
     }
 });
+app.delete('/notifications/:notificationId', async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const deletedNotification = await Notification.findByIdAndDelete(notificationId);
 
+        if (!deletedNotification) {
+            return res.status(404).json({ message: "Không tìm thấy thông báo!" });
+        }
+
+        res.status(200).json({ message: "Đã xóa thông báo thành công!" });
+    } catch (error) {
+        console.error("❌ Lỗi khi xóa thông báo:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+app.get('/notifications/:id', async (req, res) => {
+    const notification = await Notification.findById(req.params.id);
+    if (!notification) return res.status(404).send("Notification not found");
+    res.json(notification);
+  });
+
+  // Cập nhật nội dung thông báo
+  app.put('/notifications/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { content } = req.body;
+
+        const updatedNotification = await Notification.findByIdAndUpdate(
+            id,
+            { content },
+            { new: true }
+        );
+
+        if (!updatedNotification) {
+            return res.status(404).json({ message: "Không tìm thấy thông báo!" });
+        }
+
+        res.status(200).json({ message: "Cập nhật thông báo thành công!", notification: updatedNotification });
+    } catch (error) {
+        console.error("❌ Lỗi khi cập nhật thông báo:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+
+
+const ExerciseSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    description: { type: String },
+    points: { type: Number },
+    dueDate: { type: Date },
+    classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+    createdAt: { type: Date, default: Date.now },
+    fileUrls: { type: [String], default: [] } // Thêm thuộc tính để lưu đường dẫn file
+});
+
+const Exercise = mongoose.model('Exercise', ExerciseSchema);
+module.exports = Exercise;
+app.post('/create-exercise', upload.array('files'), async (req, res) => {
+    const { title, description, points, dueDate, classId } = req.body;
+
+    if (!title || !classId) {
+        return res.status(400).json({ message: "Tiêu đề và classId là bắt buộc!" });
+    }
+
+    try {
+        const newExercise = new Exercise({
+            title,
+            description,
+            points,
+            dueDate,
+            classId
+        });
+
+        // Nếu có file được upload, lưu đường dẫn file vào exercise
+        if (req.files && req.files.length > 0) {
+            newExercise.fileUrls = req.files.map(file => file.path); // Lưu đường dẫn file
+        }
+
+        await newExercise.save();
+        res.status(201).json({ message: "Bài tập đã được tạo thành công!", exercise: newExercise });
+    } catch (error) {
+        console.error("❌ Lỗi khi tạo bài tập:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+app.get('/exercises/class/:classId', async (req, res) => {
+    const { classId } = req.params;
+
+    try {
+        const exercises = await Exercise.find({ classId }); // Tìm tất cả bài tập cho lớp học
+        res.status(200).json(exercises);
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy bài tập:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+app.delete('/exercises/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await Exercise.findByIdAndDelete(id);
+        if (!result) {
+            return res.status(404).json({ message: "Bài tập không tìm thấy!" });
+        }
+        res.status(200).json({ message: "Bài tập đã được xóa thành công!" });
+    } catch (error) {
+        console.error("❌ Lỗi khi xóa bài tập:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+app.put('/exercises/:id', upload.array('files'), async (req, res) => {
+    const { id } = req.params;
+    const { title, description, points, dueDate, classId } = req.body;
+
+    // Kiểm tra các trường bắt buộc
+    if (!title || !classId) {
+        return res.status(400).json({ message: "Tiêu đề và classId là bắt buộc!" });
+    }
+
+    try {
+        // Tìm bài tập theo ID
+        const exercise = await Exercise.findById(id);
+        if (!exercise) {
+            return res.status(404).json({ message: "Bài tập không tìm thấy!" });
+        }
+
+        // Cập nhật thông tin bài tập
+        exercise.title = title;
+        exercise.description = description;
+        exercise.points = points;
+        exercise.dueDate = dueDate;
+        exercise.classId = classId;
+
+        // Nếu có file được upload, lưu đường dẫn file vào exercise
+        if (req.files && req.files.length > 0) {
+            exercise.fileUrls = req.files.map(file => file.path); // Cập nhật đường dẫn file
+        }
+
+        // Lưu bài tập đã cập nhật
+        await exercise.save();
+        res.status(200).json({ message: "Bài tập đã được cập nhật thành công!", exercise });
+    } catch (error) {
+        console.error("❌ Lỗi khi cập nhật bài tập:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+app.get('/exercises/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const exercise = await Exercise.findById(id); // Tìm bài tập theo ID
+        if (!exercise) {
+            return res.status(404).json({ message: "Bài tập không tìm thấy!" });
+        }
+        res.status(200).json(exercise); // Trả về thông tin bài tập
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy bài tập:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+const ClassMemberSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+    joinedAt: { type: Date, default: Date.now }
+});
+app.post('/join-class', async (req, res) => {
+    const { classCode, classPassword, userId } = req.body;
+
+    try {
+        // Tìm lớp học theo mã lớp
+        const classData = await Class.findOne({ code: classCode });
+
+        if (!classData) {
+            return res.status(404).json({ message: "Không tìm thấy lớp học!" });
+        }
+
+        // Kiểm tra mật khẩu lớp học
+        if (classData.password !== classPassword) {
+            return res.status(400).json({ message: "Mật khẩu không đúng!" });
+        }
+
+        // Kiểm tra xem người dùng đã tham gia lớp học chưa
+        const existingMember = await ClassMember.findOne({ userId, classId: classData._id });
+        if (existingMember) {
+            return res.status(400).json({ message: "Bạn đã tham gia lớp học này rồi!" });
+        }
+
+        // Thêm người dùng vào bảng ClassMember
+        const newMember = new ClassMember({
+            userId,
+            classId: classData._id
+        });
+
+        await newMember.save();
+
+        res.status(201).json({ message: "Tham gia lớp học thành công!", member: newMember });
+    } catch (error) {
+        console.error("❌ Lỗi khi tham gia lớp học:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+app.get('/joined-classes/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        // Tìm tất cả classId mà user đã tham gia
+        const memberships = await ClassMember.find({ userId });
+
+        const classIds = memberships.map(m => m.classId);
+
+        // Lấy thông tin lớp học tương ứng
+        const classes = await Class.find({ _id: { $in: classIds } });
+
+        res.json(classes);
+    } catch (err) {
+        console.error("Lỗi khi lấy lớp đã tham gia:", err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+const ClassMember = mongoose.model('ClassMember', ClassMemberSchema);
+
+// API để lấy thông tin giảng viên dựa trên classId
+app.get('/teacher/class/:classId', async (req, res) => {
+    try {
+        const { classId } = req.params;
+
+        // Tìm lớp học theo classId
+        const classData = await Class.findById(classId).populate('userId', 'fullname'); // Kết nối với bảng User
+
+        if (!classData) {
+            return res.status(404).json({ message: "Không tìm thấy lớp học!" });
+        }
+
+        // Lấy thông tin giảng viên
+        const teacher = classData.userId; // Đây là thông tin giảng viên
+
+        res.status(200).json({ teacher });
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy thông tin giảng viên:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+
+
+// API để lấy danh sách học viên dựa trên classId
+app.get('/students/class/:classId', async (req, res) => {
+    try {
+        const { classId } = req.params;
+
+        // Log classId để đảm bảo nó được nhận đúng
+        console.log("Nhận classId:", classId);
+
+        // Tìm tất cả ClassMember theo classId
+        const classMembers = await ClassMember.find({ classId }).populate('userId', 'fullname');
+
+        // Log classMembers đã được truy xuất
+        console.log("Đã truy xuất classMembers:", classMembers);
+
+        if (!classMembers.length) {
+            return res.status(404).json({ message: "Không tìm thấy học viên nào trong lớp học!" });
+        }
+
+        // Lấy danh sách học viên
+        const students = classMembers.map(member => member.userId); // Đây là danh sách học viên
+
+        res.status(200).json({ students });
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy thông tin học viên:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
 app.listen(3000, () => console.log('🚀 Server chạy trên cổng 3000'))
     .on("error", (err) => console.log("❌ Lỗi server:", err));
-

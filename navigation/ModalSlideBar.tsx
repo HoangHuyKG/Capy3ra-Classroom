@@ -1,12 +1,26 @@
-import React, { useEffect, useRef } from "react";
-import { Modal, View, Text, TouchableOpacity, Image, StyleSheet, Animated, FlatList } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    Modal,
+    View,
+    Text,
+    TouchableOpacity,
+    Image,
+    StyleSheet,
+    Animated,
+    FlatList,
+    ActivityIndicator,
+} from "react-native";
 import Feather from '@expo/vector-icons/Feather';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from "axios";
 
 const CustomModalMenu = ({ visible, onClose }) => {
     const slideAnim = useRef(new Animated.Value(-200)).current;
-  const navigation = useNavigation();
+    const navigation = useNavigation();
+    const [teachingClasses, setTeachingClasses] = useState([]);  // Lớp học đang giảng dạy
+    const [joinedClasses, setJoinedClasses] = useState([]); // Lớp học đang tham gia
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (visible) {
@@ -15,6 +29,7 @@ const CustomModalMenu = ({ visible, onClose }) => {
                 duration: 200,
                 useNativeDriver: true,
             }).start();
+            fetchClasses(); // Gọi API khi mở menu
         } else {
             Animated.timing(slideAnim, {
                 toValue: -200,
@@ -24,18 +39,33 @@ const CustomModalMenu = ({ visible, onClose }) => {
         }
     }, [visible]);
 
-    const courses = [
-        "Lập trình di động",
-        "Lập trình web",
-        "Trí tuệ nhân tạo",
-        "Phát triển phần mềm",
-        "Hệ thống nhúng",
-        "Khoa học dữ liệu",
-        "An toàn thông tin",
-        "Lập trình Python",
-        "Phân tích dữ liệu",
-        "Máy học"
-    ];
+    const fetchClasses = async () => {
+        try {
+            setLoading(true);
+            const userData = await AsyncStorage.getItem('user');
+            if (!userData) {
+                setTeachingClasses([]);
+                setJoinedClasses([]);
+                setLoading(false);
+                return;
+            }
+            const user = JSON.parse(userData);
+            const userId = user._id;
+
+            // Gọi API lấy lớp học đang giảng dạy
+            const teachingClassesResponse = await axios.get(`http://10.0.2.2:3000/classes/${userId}`);
+            // Gọi API lấy lớp học đang tham gia
+            const joinedClassesResponse = await axios.get(`http://10.0.2.2:3000/joined-classes/${userId}`);
+
+            // Cập nhật danh sách vào state
+            setTeachingClasses(teachingClassesResponse.data);
+            setJoinedClasses(joinedClassesResponse.data);
+        } catch (error) {
+            console.error("Lỗi khi lấy danh sách lớp học:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <Modal transparent={true} visible={visible} onRequestClose={onClose} statusBarTranslucent={true}>
@@ -46,22 +76,66 @@ const CustomModalMenu = ({ visible, onClose }) => {
                         <Text style={styles.title}>Capy3ra Classroom</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.menuItem} onPress={()=> navigation.navigate("ClassroomList")}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("ClassroomList")}>
                         <Feather name="home" size={24} color="black" />
                         <Text style={styles.menuText}>Lớp học</Text>
                     </TouchableOpacity>
 
-                    <Text style={styles.subTitle}>Đang giảng dạy</Text>
-                    <FlatList
-                        data={courses}
-                        keyExtractor={(item, index) => index.toString()}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity style={styles.boxitem}>
-                                <Image style={styles.imagelogo} source={{ uri: "https://picsum.photos/800/600?random=58" }} />
-                                <Text style={styles.course} numberOfLines={1} ellipsizeMode="tail">{item}</Text>
-                            </TouchableOpacity>
-                        )}
-                    />
+                    <Text style={styles.subTitle}>Lớp học đang giảng dạy</Text>
+
+                    {loading ? (
+                        <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                        <FlatList
+                            data={teachingClasses}
+                            keyExtractor={(item) => item._id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.boxitem}
+                                    onPress={() => {
+                                        onClose(); // Đóng menu trước
+                                        navigation.navigate("DetailClassroom", { classId: item._id });
+                                    }}
+                                >
+                                    <Image
+                                        style={styles.imagelogo}
+                                        source={{ uri: item.imageUrl || "https://picsum.photos/200" }}
+                                    />
+                                    <Text style={styles.course} numberOfLines={1} ellipsizeMode="tail">
+                                        {item.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    )}
+
+                    <Text style={styles.subTitle}>Lớp học đang tham gia</Text>
+
+                    {loading ? (
+                        <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                        <FlatList
+                            data={joinedClasses}
+                            keyExtractor={(item) => item._id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.boxitem}
+                                    onPress={() => {
+                                        onClose(); // Đóng menu trước
+                                        navigation.navigate("DetailClassroom", { classId: item._id });
+                                    }}
+                                >
+                                    <Image
+                                        style={styles.imagelogo}
+                                        source={{ uri: item.imageUrl || "https://picsum.photos/200" }}
+                                    />
+                                    <Text style={styles.course} numberOfLines={1} ellipsizeMode="tail">
+                                        {item.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    )}
 
                     <TouchableOpacity style={styles.menuItem}>
                         <Feather name="settings" size={24} color="black" />
@@ -75,7 +149,6 @@ const CustomModalMenu = ({ visible, onClose }) => {
                             <Text style={styles.profileEmail}>hoangthanh@gmail.com</Text>
                         </View>
                     </View>
-
                 </Animated.View>
 
                 <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}></TouchableOpacity>
@@ -88,10 +161,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         flexDirection: "row",
-    },
-    boxitem: {
-        flexDirection: 'row',
-        alignItems: 'center'
     },
     modalContent: {
         width: "75%",
@@ -107,19 +176,71 @@ const styles = StyleSheet.create({
         width: "25%",
         backgroundColor: "rgba(0,0,0,0.5)",
     },
-    title: { fontSize: 18, fontWeight: 'semibold', marginBottom: 10, fontFamily: "Nunito_400Regular" },
-    subTitle: { color: "#666", marginTop: 10, marginBottom: 5, fontFamily: "Nunito_400Regular" },
-    menuItem: { paddingVertical: 20, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderTopWidth: 1, borderColor: '#ddd'},
-    menuText: { fontSize: 18, marginLeft: 20, fontFamily: "Nunito_400Regular" },
-    course: { fontSize: 16, color: "#333", marginBottom: 5, fontFamily: "Nunito_400Regular", paddingVertical: 20 },
-    profileSection: { flexDirection: "row", alignItems: "center", marginVertical: 20 },
-    avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
-    profileName: { fontWeight: "bold", fontSize: 16, fontFamily: "Nunito_400Regular" },
-    profileEmail: { color: "#555", fontFamily: "Nunito_400Regular" },
-    switchAccount: { color: "blue", textDecorationLine: "underline", fontFamily: "Nunito_400Regular" },
-    imagelogo: { width: 40, height: 40, marginRight: 10, borderRadius: 20},
-    boxlogo: { flexDirection: "row", alignItems: "center"},
-    imageuser: { width: 50, height: 50, borderRadius: 25, marginRight: 10 },
+    title: {
+        fontSize: 18,
+        fontWeight: 'semibold',
+        marginBottom: 10,
+        fontFamily: "Nunito_400Regular"
+    },
+    subTitle: {
+        color: "#666",
+        marginTop: 10,
+        marginBottom: 5,
+        fontFamily: "Nunito_400Regular"
+    },
+    menuItem: {
+        paddingVertical: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        borderBottomWidth: 1,
+        borderTopWidth: 1,
+        borderColor: '#ddd'
+    },
+    menuText: {
+        fontSize: 18,
+        marginLeft: 20,
+        fontFamily: "Nunito_400Regular"
+    },
+    boxitem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10
+    },
+    course: {
+        fontSize: 16,
+        color: "#333",
+        fontFamily: "Nunito_400Regular"
+    },
+    profileSection: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 20
+    },
+    imagelogo: {
+        width: 40,
+        height: 40,
+        marginRight: 10,
+        borderRadius: 20
+    },
+    boxlogo: {
+        flexDirection: "row",
+        alignItems: "center"
+    },
+    imageuser: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginRight: 10
+    },
+    profileName: {
+        fontWeight: "bold",
+        fontSize: 16,
+        fontFamily: "Nunito_400Regular"
+    },
+    profileEmail: {
+        color: "#555",
+        fontFamily: "Nunito_400Regular"
+    },
 });
 
 export default CustomModalMenu;

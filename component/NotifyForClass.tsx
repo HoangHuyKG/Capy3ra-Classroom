@@ -50,7 +50,7 @@ const PostNotificationScreen = () => {
     });
 
     try {
-        const response = await fetch("http://192.168.1.6:3000/upload", {
+        const response = await fetch("http://10.0.2.2:3000/upload", {
             method: "POST",
             body: formData,
             headers: {
