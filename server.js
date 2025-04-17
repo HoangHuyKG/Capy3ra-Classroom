@@ -256,28 +256,27 @@ const upload = multer({
         }
     })
 });
+// Cho phép truy cập thư mục uploads từ trình duyệt
+app.use('/uploads', express.static('uploads'));
+
 app.post('/upload', upload.array('files'), async (req, res) => {
     try {
-        const { message, classId } = req.body; // Lấy classId từ body
+        const { message, classId } = req.body;
         const files = req.files;
 
-        // Kiểm tra xem classId có được cung cấp không
         if (!classId) {
             return res.status(400).json({ message: "Thiếu classId!" });
         }
 
-        // Lưu thông tin tệp vào MongoDB (nếu có)
         let fileUrl = null;
         if (files.length > 0) {
-            // Giả sử bạn muốn lưu URL của tệp đầu tiên
-            fileUrl = files[0].path; // Lưu đường dẫn của tệp đầu tiên
+            fileUrl = files.map(file => file.path.replace(/\\/g, '/')); // CHỖ NÀY SỬA
         }
 
-        // Tạo một notification mới
         const newNotification = new Notification({
             classId,
             content: message,
-            fileUrl, // Lưu đường dẫn tệp đầu tiên
+            fileUrl, // đây là mảng
         });
 
         await newNotification.save();
@@ -288,6 +287,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
         res.status(500).json({ message: "Lỗi server!" });
     }
 });
+
 app.get('/notifications/class/:classId', async (req, res) => {
     try {
         const { classId } = req.params;
@@ -320,25 +320,29 @@ app.get('/notifications/:id', async (req, res) => {
   });
 
   // Cập nhật nội dung thông báo
-  app.put('/notifications/:id', async (req, res) => {
+  app.put('/notifications/:id', upload.array('files'), async (req, res) => {
     try {
-        const { id } = req.params;
-        const { content } = req.body;
-
-        const updatedNotification = await Notification.findByIdAndUpdate(
-            id,
-            { content },
-            { new: true }
-        );
-
-        if (!updatedNotification) {
-            return res.status(404).json({ message: "Không tìm thấy thông báo!" });
-        }
-
-        res.status(200).json({ message: "Cập nhật thông báo thành công!", notification: updatedNotification });
+      const { id } = req.params;
+      const { content } = req.body;
+  
+      const updatedFiles = req.files.map(file => file.path); // Lưu đường dẫn tệp
+  
+      // Cập nhật thông báo với nội dung và đường dẫn tệp mới
+      const updatedNotification = await Notification.findByIdAndUpdate(
+        id,
+        { content, fileUrl: updatedFiles }, // ✅ đúng trường
+        { new: true }
+      );
+      
+  
+      if (!updatedNotification) {
+        return res.status(404).json({ message: "Không tìm thấy thông báo!" });
+      }
+  
+      res.status(200).json({ message: "Cập nhật thông báo thành công!", notification: updatedNotification });
     } catch (error) {
-        console.error("❌ Lỗi khi cập nhật thông báo:", error);
-        res.status(500).json({ message: "Lỗi server!" });
+      console.error("❌ Lỗi khi cập nhật thông báo:", error);
+      res.status(500).json({ message: "Lỗi server!" });
     }
 });
 

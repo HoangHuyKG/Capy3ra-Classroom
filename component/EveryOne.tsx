@@ -26,11 +26,13 @@ const EveryOneScreen = ({ navigation }) => {
     const fetchStudents = async () => {
       try {
         const response = await axios.get(`http://10.0.2.2:3000/students/class/${classId}`);
-        setStudents(response.data.students);
+        setStudents(response.data.students || []);
       } catch (error) {
-        console.error("Lỗi khi lấy thông tin học viên:", error);
+        // Không in lỗi ra console nữa
+        setStudents([]); // vẫn set mảng rỗng để UI hoạt động bình thường
       }
     };
+    
 
     fetchTeacher();
     fetchStudents();

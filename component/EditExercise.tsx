@@ -84,17 +84,7 @@ const EditExercise = () => {
                     />
                 </View>
 
-                <View style={styles.inputRow}>
-                    <Ionicons name="attach" size={30} color="gray" />
-                    <Text style={styles.attachText}>Thêm tệp đính kèm</Text>
-                </View>
-                <View style={styles.inputRow}>
-                      <FontAwesome name="paperclip" size={24} color="gray" />
-                    <Text style={styles.attachText}>Tệp đính kèm:</Text>
-                    {fileUrls.map((url, index) => (
-                        <Text key={index} style={styles.fileUrl}>{url}</Text>
-                    ))}
-                </View>
+                
                 <View style={styles.inputRow}>
                     <MaterialIcons name="description" size={24} color="gray" />
                     <TextInput
@@ -125,6 +115,7 @@ const EditExercise = () => {
                         onChangeText={setDueDate}
                     />
                 </View>
+                
             </View>
         </View>
     );

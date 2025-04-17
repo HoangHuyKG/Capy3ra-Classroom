@@ -79,7 +79,7 @@ const DetailClassroom = () => {
         try {
             await axios.delete(`http://10.0.2.2:3000/notifications/${id}`);
             await fetchNotifications();
-             Alert.alert("Thành công", "Lớp học đã bị xóa!");
+             Alert.alert("Thành công", "Thông báo đã được xóa!");
         } catch (error) {
             console.error("❌ Lỗi khi xóa thông báo:", error);
         } finally {

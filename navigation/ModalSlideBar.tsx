@@ -18,18 +18,31 @@ import axios from "axios";
 const CustomModalMenu = ({ visible, onClose }) => {
     const slideAnim = useRef(new Animated.Value(-200)).current;
     const navigation = useNavigation();
-    const [teachingClasses, setTeachingClasses] = useState([]);  // Lớp học đang giảng dạy
-    const [joinedClasses, setJoinedClasses] = useState([]); // Lớp học đang tham gia
+    const [teachingClasses, setTeachingClasses] = useState([]);
+    const [joinedClasses, setJoinedClasses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState({ fullname: "Tên người dùng", email: "Email" });
 
     useEffect(() => {
+        const fetchUserInfo = async () => {
+            try {
+                const userData = await AsyncStorage.getItem('user');
+                if (userData) {
+                    setUser(JSON.parse(userData));
+                }
+            } catch (error) {
+                console.error("Lỗi khi lấy thông tin user:", error);
+            }
+        };
+
         if (visible) {
             Animated.timing(slideAnim, {
                 toValue: 0,
                 duration: 200,
                 useNativeDriver: true,
             }).start();
-            fetchClasses(); // Gọi API khi mở menu
+            fetchUserInfo();
+            fetchClasses();
         } else {
             Animated.timing(slideAnim, {
                 toValue: -200,
@@ -49,19 +62,26 @@ const CustomModalMenu = ({ visible, onClose }) => {
                 setLoading(false);
                 return;
             }
+
             const user = JSON.parse(userData);
             const userId = user._id;
 
-            // Gọi API lấy lớp học đang giảng dạy
-            const teachingClassesResponse = await axios.get(`http://10.0.2.2:3000/classes/${userId}`);
-            // Gọi API lấy lớp học đang tham gia
-            const joinedClassesResponse = await axios.get(`http://10.0.2.2:3000/joined-classes/${userId}`);
+            try {
+                const teachingClassesResponse = await axios.get(`http://10.0.2.2:3000/classes/${userId}`);
+                setTeachingClasses(teachingClassesResponse.data);
+            } catch {
+                setTeachingClasses([]);
+            }
 
-            // Cập nhật danh sách vào state
-            setTeachingClasses(teachingClassesResponse.data);
-            setJoinedClasses(joinedClassesResponse.data);
+            try {
+                const joinedClassesResponse = await axios.get(`http://10.0.2.2:3000/joined-classes/${userId}`);
+                setJoinedClasses(joinedClassesResponse.data);
+            } catch {
+                setJoinedClasses([]);
+            }
+
         } catch (error) {
-            console.error("Lỗi khi lấy danh sách lớp học:", error);
+            console.error("Lỗi lấy dữ liệu người dùng:", error);
         } finally {
             setLoading(false);
         }
@@ -85,6 +105,8 @@ const CustomModalMenu = ({ visible, onClose }) => {
 
                     {loading ? (
                         <ActivityIndicator size="small" color="#000" />
+                    ) : teachingClasses.length === 0 ? (
+                        <Text style={{ fontStyle: 'italic', color: '#888', marginBottom: 10 }}>Hiện chưa có lớp học</Text>
                     ) : (
                         <FlatList
                             data={teachingClasses}
@@ -93,7 +115,7 @@ const CustomModalMenu = ({ visible, onClose }) => {
                                 <TouchableOpacity
                                     style={styles.boxitem}
                                     onPress={() => {
-                                        onClose(); // Đóng menu trước
+                                        onClose();
                                         navigation.navigate("DetailClassroom", { classId: item._id });
                                     }}
                                 >
@@ -121,7 +143,7 @@ const CustomModalMenu = ({ visible, onClose }) => {
                                 <TouchableOpacity
                                     style={styles.boxitem}
                                     onPress={() => {
-                                        onClose(); // Đóng menu trước
+                                        onClose();
                                         navigation.navigate("DetailClassroom", { classId: item._id });
                                     }}
                                 >
@@ -145,8 +167,8 @@ const CustomModalMenu = ({ visible, onClose }) => {
                     <View style={styles.profileSection}>
                         <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.jpg")} />
                         <View>
-                            <Text style={styles.profileName}>Thành Võ</Text>
-                            <Text style={styles.profileEmail}>hoangthanh@gmail.com</Text>
+                            <Text style={styles.profileName}>{user.fullname}</Text>
+                            <Text style={styles.profileEmail}>{user.email}</Text>
                         </View>
                     </View>
                 </Animated.View>

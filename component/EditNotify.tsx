@@ -12,11 +12,15 @@ const EditNotifyScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const notificationId = route.params?.notificationId;
+  const [removedOldFiles, setRemovedOldFiles] = useState([]);
 
   const [notification, setNotification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newFiles, setNewFiles] = useState([]);
-
+  const removeOldFile = (url) => {
+    setRemovedOldFiles([...removedOldFiles, url]);
+  };
+  
   useEffect(() => {
     if (notificationId) {
       fetchNotification();
@@ -56,23 +60,21 @@ const EditNotifyScreen = () => {
     try {
       const formData = new FormData();
       formData.append("content", notification.content);
-
+  
       newFiles.forEach(file => {
         formData.append("files", {
           uri: file.uri,
           name: file.name,
-          type: "application/octet-stream",
+          type: "application/octet-stream", // hoặc "application/pdf", "image/png" tùy loại
         });
       });
-
+  
       const response = await fetch(`http://10.0.2.2:3000/notifications/${notificationId}`, {
         method: "PUT",
         body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        // ❌ KHÔNG thêm headers thủ công nhé!
       });
-
+  
       const data = await response.json();
       if (response.ok) {
         Alert.alert("Thành công", "Thông báo đã được cập nhật!");
@@ -85,7 +87,7 @@ const EditNotifyScreen = () => {
       Alert.alert("Lỗi", "Đã xảy ra lỗi khi lưu.");
     }
   };
-
+  
   if (loading || !notification) {
     return (
       <View style={styles.loadingContainer}>
@@ -128,10 +130,13 @@ const EditNotifyScreen = () => {
 
         {/* Danh sách tệp (gồm tệp đã có và mới) */}
         <FlatList
-          data={[
-            ...(notification.fileUrl || []).map((url) => ({ type: 'old', url })),
-            ...newFiles.map((file, index) => ({ type: 'new', file, index })),
-          ]}
+         data={[
+          ...(notification.fileUrl || [])
+            .filter(url => !removedOldFiles.includes(url))  // ⚠️ Lọc ra các file chưa bị xoá
+            .map((url) => ({ type: 'old', url })),
+          ...newFiles.map((file, index) => ({ type: 'new', file, index })),
+        ]}
+        
           keyExtractor={(_, index) => index.toString()}
           renderItem={({ item }) => {
             if (item.type === 'old') {
@@ -141,13 +146,10 @@ const EditNotifyScreen = () => {
                   <Ionicons name="document" size={24} color="gray" />
                   <Text style={styles.fileName} numberOfLines={1}>{fileName}</Text>
           
-                  {/* Nút mở file */}
-                  <TouchableOpacity
-                    onPress={() => Linking.openURL(item.url.replace(/\\/g, '/'))}
-                    style={styles.viewButton}
-                  >
-                    <Ionicons name="eye-outline" size={24} color="#4285F4" />
-                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => removeOldFile(item.url)}>
+  <Ionicons name="close-circle" size={24} color="red" />
+</TouchableOpacity>
+
                   
                 </View>
               );
@@ -157,15 +159,9 @@ const EditNotifyScreen = () => {
                   <Ionicons name="document" size={24} color="gray" />
                   <Text style={styles.fileName} numberOfLines={1}>{item.file.name}</Text>
           
-                  {/* Nút mở file mới */}
-                  <TouchableOpacity
-                    onPress={() => Linking.openURL(item.file.uri)}
-                    style={styles.viewButton}
-                  >
-                    <Ionicons name="eye-outline" size={24} color="#4285F4" />
-                  </TouchableOpacity>
+               
           
-                  {/* Nút xoá file */}
+           
                   <TouchableOpacity onPress={() => removeNewFile(item.index)}>
                     <Ionicons name="close-circle" size={24} color="red" />
                   </TouchableOpacity>
