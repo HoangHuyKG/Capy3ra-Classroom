@@ -14,7 +14,7 @@ const FooterBar = ({ activeTab, classId }) => {
         style={styles.footerItem}
         onPress={() => navigation.navigate("DetailClassroom", { activeTab: 'message', classId })} // Truyền classId
       >
-        <MaterialCommunityIcons name="comment-text-multiple-outline" size={24} color={activeTab === 'message' ? '#0641F0' : '#5f6368'}/>
+        <MaterialCommunityIcons name="comment-text-multiple-outline" size={24} color={activeTab === 'message' ? '#0961F5' : '#333'}/>
         <Text style={activeTab === 'message' ? styles.activeText : styles.inactiveText}>Bảng tin</Text>
       </TouchableOpacity>
 
@@ -22,7 +22,7 @@ const FooterBar = ({ activeTab, classId }) => {
         style={styles.footerItem}
         onPress={() => navigation.navigate("GiveExercise", { activeTab: 'clipboard', classId })} // Truyền classId
       >
-        <MaterialCommunityIcons name="clipboard-text-outline" size={24} color={activeTab === 'clipboard' ? '#0641F0' : '#5f6368'} />
+        <MaterialCommunityIcons name="clipboard-text-outline" size={24} color={activeTab === 'clipboard' ? '#0961F5' : '#333'} />
         <Text style={activeTab === 'clipboard' ? styles.activeText : styles.inactiveText}>Bài tập trên lớp</Text>
       </TouchableOpacity>
 
@@ -30,7 +30,7 @@ const FooterBar = ({ activeTab, classId }) => {
         style={styles.footerItem}
         onPress={() => navigation.navigate("EveryOneScreen", { activeTab: 'users', classId })} // Truyền classId
       >
-        <MaterialCommunityIcons name="account-multiple" size={24} color={activeTab === 'users' ? '#0641F0' : '#5f6368'} />
+        <MaterialCommunityIcons name="account-multiple" size={24} color={activeTab === 'users' ? '#0961F5' : '#333'} />
         <Text style={activeTab === 'users' ? styles.activeText : styles.inactiveText}>Mọi người</Text>
       </TouchableOpacity>
     </View>
@@ -56,8 +56,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#5f6368'
   },
   footerItem: { alignItems: 'center' },
-  activeText: { fontWeight: 'bold', color: '#0641F0', fontFamily: "Nunito_400Regular" },
-  inactiveText: { color: '#5f6368', fontFamily: "Nunito_400Regular", fontWeight: 'bold' },
+  activeText: { fontWeight: 'bold', color: '#0961F5', fontFamily: "Jost_400Regular" },
+  inactiveText: { color: '#333', fontFamily: "Jost_400Regular", fontWeight: 'bold' },
 });
 
 export default FooterBar;

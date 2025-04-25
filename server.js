@@ -89,11 +89,16 @@ app.post('/login', async (req, res) => {
 });
 
 const randomImages = [
-    "https://picsum.photos/800/600?random=58",
-    "https://picsum.photos/800/600?random=12",
-    "https://picsum.photos/800/600?random=4",
+    "https://picsum.photos/800/600?random=1",
     "https://picsum.photos/800/600?random=2",
-
+    "https://picsum.photos/800/600?random=3",
+    "https://picsum.photos/800/600?random=4",
+    "https://picsum.photos/800/600?random=5",
+    "https://picsum.photos/800/600?random=6",
+    "https://picsum.photos/800/600?random=7",
+    "https://picsum.photos/800/600?random=8",
+    "https://picsum.photos/800/600?random=9",
+    "https://picsum.photos/800/600?random=10",
 ];
 
 // Định nghĩa schema Lớp học
@@ -236,31 +241,35 @@ app.delete('/class/:classId', async (req, res) => {
     }
 });
 // thông báo
+// Notification Schema
 const NotificationSchema = new mongoose.Schema({
     classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
     content: { type: String, required: true },
-    fileUrl: { type: [String], default: [] }, // Thay đổi thành mảng chuỗi
+    username: { type: String, required: true },
+    fileUrl: { type: [String], default: [] },
     createdAt: { type: Date, default: Date.now }
 });
 const Notification = mongoose.model('Notification', NotificationSchema);
 
-
-// upload file
+// File upload configuration
 const upload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => {
-            cb(null, 'uploads/'); // Thư mục lưu trữ tệp upload
+            cb(null, 'uploads/');
         },
         filename: (req, file, cb) => {
-            cb(null, file.originalname); // Giữ nguyên tên tệp
+            cb(null, file.originalname);
         }
     })
 });
-// Cho phép truy cập thư mục uploads từ trình duyệt
+
+// Serve files from the 'uploads' folder
 app.use('/uploads', express.static('uploads'));
 
+// File upload route
 app.post('/upload', upload.array('files'), async (req, res) => {
     try {
+
         const { message, classId } = req.body;
         const files = req.files;
 
@@ -270,13 +279,16 @@ app.post('/upload', upload.array('files'), async (req, res) => {
 
         let fileUrl = null;
         if (files.length > 0) {
-            fileUrl = files.map(file => file.path.replace(/\\/g, '/')); // CHỖ NÀY SỬA
+            fileUrl = files.map(file => file.path.replace(/\\/g, '/'));
         }
+
+        const username = req.body.username || 'Ẩn danh';
 
         const newNotification = new Notification({
             classId,
             content: message,
-            fileUrl, // đây là mảng
+            fileUrl,
+            username
         });
 
         await newNotification.save();
@@ -288,10 +300,11 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     }
 });
 
+
 app.get('/notifications/class/:classId', async (req, res) => {
     try {
         const { classId } = req.params;
-        const notifications = await Notification.find({ classId }); // Tìm tất cả thông báo cho lớp học
+        const notifications = await Notification.find({ classId });
         res.status(200).json(notifications);
     } catch (error) {
         console.error("❌ Lỗi khi lấy thông báo:", error);
@@ -300,51 +313,105 @@ app.get('/notifications/class/:classId', async (req, res) => {
 });
 app.delete('/notifications/:notificationId', async (req, res) => {
     try {
-        const { notificationId } = req.params;
-        const deletedNotification = await Notification.findByIdAndDelete(notificationId);
-
-        if (!deletedNotification) {
-            return res.status(404).json({ message: "Không tìm thấy thông báo!" });
+        const notification = await Notification.findById(req.params.notificationId);
+        if (!notification) {
+            return res.status(404).json({ message: 'Thông báo không tồn tại.' });
         }
 
-        res.status(200).json({ message: "Đã xóa thông báo thành công!" });
+        // Xóa các file đính kèm nếu có
+        if (Array.isArray(notification.fileUrl)) {
+            for (const file of notification.fileUrl) {
+                const filePath = path.resolve('uploads', path.basename(file));
+
+
+
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath); 
+                } else {
+                    console.log(`Không tìm thấy file: ${filePath}`);
+                }
+            }
+        }
+
+        // Xóa thông báo
+        await Notification.findByIdAndDelete(req.params.notificationId);
+        res.json({ message: 'Xóa thông báo và file thành công.' });
     } catch (error) {
-        console.error("❌ Lỗi khi xóa thông báo:", error);
-        res.status(500).json({ message: "Lỗi server!" });
+        console.error("❌ Lỗi khi xóa thông báo và file:", error);
+        res.status(500).json({ message: 'Có lỗi xảy ra khi xóa thông báo.' });
     }
 });
+
 app.get('/notifications/:id', async (req, res) => {
     const notification = await Notification.findById(req.params.id);
     if (!notification) return res.status(404).send("Notification not found");
     res.json(notification);
   });
 
-  // Cập nhật nội dung thông báo
   app.put('/notifications/:id', upload.array('files'), async (req, res) => {
     try {
       const { id } = req.params;
-      const { content } = req.body;
+      const { content, keptOldFiles } = req.body;
   
-      const updatedFiles = req.files.map(file => file.path); // Lưu đường dẫn tệp
+      // Lấy danh sách tệp mới upload lên
+      const newUploadedFiles = req.files.map(file => file.path);
   
-      // Cập nhật thông báo với nội dung và đường dẫn tệp mới
+      // Parse danh sách tệp cũ còn giữ lại từ client (dưới dạng JSON string)
+      let oldFilesToKeep = [];
+      try {
+        oldFilesToKeep = keptOldFiles ? JSON.parse(keptOldFiles) : [];
+      } catch (e) {
+        return res.status(400).json({ message: "Dữ liệu keptOldFiles không hợp lệ!" });
+      }
+  
+      // Lấy thông báo cũ để kiểm tra và xử lý file cũ
+      const oldNotification = await Notification.findById(id);
+      if (!oldNotification) {
+        return res.status(404).json({ message: "Không tìm thấy thông báo!" });
+      }
+  
+      // Tìm các file cũ không được giữ lại
+      const filesToDelete = Array.isArray(oldNotification.fileUrl) ? 
+        oldNotification.fileUrl.filter(file => !oldFilesToKeep.includes(file)) : [];
+  
+      for (const file of filesToDelete) {
+        const filePath = path.resolve('uploads', path.basename(file));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath); // Xóa khỏi ổ đĩa
+        } else {
+          console.log(`⚠️ Không tìm thấy file để xóa: ${filePath}`);
+        }
+      }
+  
+      // Tạo danh sách file mới sau khi cập nhật
+      const updatedFileUrls = [...oldFilesToKeep, ...newUploadedFiles];
+  
+      // Cập nhật nội dung và fileUrl mới
       const updatedNotification = await Notification.findByIdAndUpdate(
         id,
-        { content, fileUrl: updatedFiles }, // ✅ đúng trường
+        {
+          content,
+          fileUrl: updatedFileUrls,
+        },
         { new: true }
       );
-      
   
       if (!updatedNotification) {
         return res.status(404).json({ message: "Không tìm thấy thông báo!" });
       }
   
-      res.status(200).json({ message: "Cập nhật thông báo thành công!", notification: updatedNotification });
+      res.status(200).json({
+        message: "Cập nhật thông báo thành công!",
+        notification: updatedNotification
+      });
+  
     } catch (error) {
       console.error("❌ Lỗi khi cập nhật thông báo:", error);
       res.status(500).json({ message: "Lỗi server!" });
     }
-});
+  });
+  
+  
 
 
 const ExerciseSchema = new mongoose.Schema({
@@ -402,45 +469,78 @@ app.delete('/exercises/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
-        const result = await Exercise.findByIdAndDelete(id);
-        if (!result) {
-            return res.status(404).json({ message: "Bài tập không tìm thấy!" });
-        }
-        res.status(200).json({ message: "Bài tập đã được xóa thành công!" });
-    } catch (error) {
-        console.error("❌ Lỗi khi xóa bài tập:", error);
-        res.status(500).json({ message: "Lỗi server!" });
-    }
-});
-app.put('/exercises/:id', upload.array('files'), async (req, res) => {
-    const { id } = req.params;
-    const { title, description, points, dueDate, classId } = req.body;
-
-    // Kiểm tra các trường bắt buộc
-    if (!title || !classId) {
-        return res.status(400).json({ message: "Tiêu đề và classId là bắt buộc!" });
-    }
-
-    try {
-        // Tìm bài tập theo ID
         const exercise = await Exercise.findById(id);
         if (!exercise) {
             return res.status(404).json({ message: "Bài tập không tìm thấy!" });
         }
 
-        // Cập nhật thông tin bài tập
+        // Nếu có file đính kèm → xóa file
+        if (Array.isArray(exercise.fileUrls)) {
+            for (const file of exercise.fileUrls) {
+                const filePath = path.resolve('uploads', path.basename(file));
+                console.log(filePath)
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                } else {
+                }
+            }
+        }
+
+        // Xóa bài tập khỏi DB
+        await Exercise.findByIdAndDelete(id);
+        res.status(200).json({ message: "Bài tập và các file đính kèm đã được xóa!" });
+
+    } catch (error) {
+        console.error("❌ Lỗi khi xóa bài tập:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+
+
+
+app.put('/exercises/:id', upload.array('files'), async (req, res) => {
+    const { id } = req.params;
+    const { title, description, points, dueDate, classId, oldFileUrls } = req.body;
+
+    if (!title || !classId) {
+        return res.status(400).json({ message: "Tiêu đề và classId là bắt buộc!" });
+    }
+
+    try {
+        const exercise = await Exercise.findById(id);
+        if (!exercise) {
+            return res.status(404).json({ message: "Bài tập không tìm thấy!" });
+        }
+
+        // Lấy danh sách file hiện tại
+        const currentFileUrls = exercise.fileUrls || [];
+
+        // Phân tích file giữ lại từ client
+        const oldFiles = oldFileUrls ? JSON.parse(oldFileUrls) : [];
+
+        // Xác định file cần xóa (không còn trong danh sách oldFileUrls)
+        const filesToDelete = currentFileUrls.filter(file => !oldFiles.includes(file));
+
+        // Tiến hành xóa file khỏi hệ thống
+        for (const file of filesToDelete) {
+            const filePath = path.resolve('uploads', path.basename(file));
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            } else {
+            }
+        }
+
+        // Cập nhật các trường khác
         exercise.title = title;
         exercise.description = description;
         exercise.points = points;
         exercise.dueDate = dueDate;
         exercise.classId = classId;
 
-        // Nếu có file được upload, lưu đường dẫn file vào exercise
-        if (req.files && req.files.length > 0) {
-            exercise.fileUrls = req.files.map(file => file.path); // Cập nhật đường dẫn file
-        }
+        // Gộp file mới và cũ
+        const newFiles = req.files?.map(file => file.path) || [];
+        exercise.fileUrls = [...oldFiles, ...newFiles];
 
-        // Lưu bài tập đã cập nhật
         await exercise.save();
         res.status(200).json({ message: "Bài tập đã được cập nhật thành công!", exercise });
     } catch (error) {
@@ -448,6 +548,8 @@ app.put('/exercises/:id', upload.array('files'), async (req, res) => {
         res.status(500).json({ message: "Lỗi server!" });
     }
 });
+
+
 app.get('/exercises/:id', async (req, res) => {
     const { id } = req.params;
 

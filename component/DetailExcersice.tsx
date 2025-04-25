@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
-import Header from './Header';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, FlatList, Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -8,21 +7,51 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import * as DocumentPicker from 'expo-document-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import Toast from 'react-native-toast-message';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 const DetailExercise = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const classId = route.params?.classId; // Nhận classId từ params
+    const classId = route.params?.classId;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [points, setPoints] = useState('');
-    const [dueDate, setDueDate] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [dueDate, setDueDate] = useState('');
+    const [dueDateISO, setDueDateISO] = useState('');
+    const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+
+
+
+    const handleConfirm = (date) => {
+        const now = new Date();
+        if (date < now) {
+            Toast.show({
+                type: 'warning',
+                text1: 'Cảnh báo',
+                text2: 'Ngày tới hạn không thể là ngày hoặc giờ trong quá khứ!',
+            });
+            return;
+        }
+
+        const formatted = date.toLocaleString('vi-VN');
+        setDueDate(formatted);
+        setDueDateISO(date.toISOString());
+        setDatePickerVisibility(false);
+    };
+
+
 
     const handleCreateExercise = async () => {
         if (!title) {
-            Alert.alert("Lỗi", "Tiêu đề bài tập là bắt buộc!");
+            Toast.show({
+                type: 'warning',
+                text1: 'Cảnh báo',
+                text2: 'Tiêu đề bài tập là bắt buộc!',
+            });
             return;
         }
 
@@ -30,30 +59,35 @@ const DetailExercise = () => {
         formData.append("title", title);
         formData.append("description", description);
         formData.append("points", points);
-        formData.append("dueDate", dueDate);
+        formData.append("dueDate", dueDateISO);
         formData.append("classId", classId);
 
-        // Thêm các tệp đã chọn vào formData
         selectedFiles.forEach((file) => {
             formData.append("files", {
                 uri: file.uri,
                 name: file.name,
-                type: "application/octet-stream", // Hoặc loại MIME phù hợp
+                type: "application/octet-stream",
             });
         });
 
         try {
-            const response = await axios.post('http://10.0.2.2:3000/create-exercise', formData, {
+            const response = await axios.post('http://192.168.1.6:3000/create-exercise', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-
-            Alert.alert("Thành công", response.data.message);
+            Toast.show({
+                type: 'success',
+                text1: 'Thành công',
+                text2: response.data.message,
+            });
             navigation.navigate("GiveExercise", { activeTab: 'clipboard', classId });
         } catch (error) {
-            console.error("Lỗi khi tạo bài tập:", error);
-            Alert.alert("Lỗi", "Không thể tạo bài tập. Vui lòng thử lại.");
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi',
+                text2: 'Không thể tạo bài tập. Vui lòng thử lại.',
+            });
         }
     };
 
@@ -75,89 +109,153 @@ const DetailExercise = () => {
     const removeFile = (index) => {
         setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
     };
+    const getFileIcon = (filename) => {
+        const extension = filename.split('.').pop()?.toLowerCase();
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.navigate("GiveExercise", { activeTab: 'clipboard', classId })}>
-                    <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#5f6368" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Tạo bài tập cho lớp</Text>
-                <TouchableOpacity style={styles.buttonheader} onPress={handleCreateExercise}>
-                    <Text style={styles.buttonText}>Giao</Text>
-                </TouchableOpacity>
+        switch (extension) {
+            case 'pdf':
+                return <MaterialCommunityIcons name="file-pdf-box" size={24} color="#E53935" />;
+            case 'doc':
+            case 'docx':
+                return <MaterialCommunityIcons name="file-word-box" size={24} color="#1E88E5" />;
+            case 'xls':
+            case 'xlsx':
+                return <MaterialCommunityIcons name="file-excel-box" size={24} color="#43A047" />;
+            case 'png':
+            case 'jpg':
+            case 'jpeg':
+            case 'gif':
+                return <MaterialCommunityIcons name="file-image" size={24} color="#FB8C00" />;
+            case 'ppt':
+            case 'pptx':
+                return <MaterialCommunityIcons name="file-powerpoint-box" size={24} color="#E64A19" />;
+            case 'zip':
+            case 'rar':
+                return <MaterialCommunityIcons name="folder-zip" size={24} color="#6D4C41" />;
+            default:
+                return <MaterialCommunityIcons name="file-document" size={24} color="#607D8B" />;
+        }
+    };
+    const renderInputRow = ({ icon, placeholder, value, onChangeText, multiline, numberOfLines, style, iconStyle }) => (
+        <View style={[styles.inputRow, style]}>
+            <View style={[{ marginTop: multiline ? 5 : 0 }, iconStyle]}>
+                {icon}
             </View>
-
-            {/* Input Section */}
-            <View style={styles.inputContainer}>
-                <View style={styles.inputRow}>
-                    <MaterialIcons name="subtitles" size={24} color="gray" />
-                    <TextInput
-                        style={styles.input}
-                        placeholder='Tiêu đề bài tập (bắt buộc)'
-                        value={title}
-                        onChangeText={setTitle}
-                    />
-                </View>
-
-               
-
-                <View style={styles.inputRow}>
-                    <MaterialIcons name="description" size={24} color="gray" />
-                    <TextInput
-                        style={[styles.input]}
-                        placeholder="Nhập mô tả"
-                        multiline
-                        numberOfLines={10}
-                        value={description}
-                        onChangeText={setDescription}
-                    />
-                </View>
-                <View style={styles.inputRow}>
-                    <Ionicons name="trophy-outline" size={24} color="gray" />
-                    <TextInput
-                        style={styles.input}
-                        placeholder='Điểm'
-                        value={points}
-                        onChangeText={setPoints}
-                    />
-                </View>
-                <View style={styles.inputRow}>
-                    <FontAwesome name="calendar-plus-o" size={24} color="gray" />
-                    <TextInput
-                        style={styles.input}
-                        placeholder='Đặt ngày tới hạn'
-                        value={dueDate}
-                        onChangeText={setDueDate}
-                    />
-                </View>
-                <TouchableOpacity style={styles.inputRow} onPress={pickDocument}>
-                    <Ionicons name="attach" size={30} color="gray" />
-                    <Text style={styles.attachText}>Thêm tệp đính kèm</Text>
-                </TouchableOpacity>
-                {/* Hiển thị danh sách tệp đã chọn */}
-                <FlatList
-                    data={selectedFiles}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item, index }) => (
-                        <View style={styles.fileItem}>
-                            <Ionicons name="document" size={24} color="gray" />
-                            <Text style={styles.fileName} numberOfLines={1}>{item.name}</Text>
-                            <TouchableOpacity onPress={() => removeFile(index)}>
-                                <Ionicons name="close-circle" size={24} color="red" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                />
-            </View>
+            <TextInput
+                style={styles.input}
+                placeholder={placeholder}
+                value={value}
+                onChangeText={onChangeText}
+                multiline={multiline}
+                numberOfLines={numberOfLines}
+                textAlignVertical={multiline ? 'top' : 'center'}
+                placeholderTextColor="#333"
+            />
         </View>
     );
-};
 
+
+
+    return (
+        <FlatList
+            style={styles.container}
+            data={['dummy']}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={() => (
+                <View>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.navigate("GiveExercise", { activeTab: 'clipboard', classId: classId })}>
+                            <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>Tạo bài tập cho lớp</Text>
+                        <TouchableOpacity style={styles.buttonheader} onPress={handleCreateExercise}>
+                            <Text style={styles.buttonText}>Giao</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        {renderInputRow({
+                            icon: <MaterialCommunityIcons name="subtitles-outline" size={24} color="#333" />,
+                            placeholder: 'Tiêu đề bài tập (bắt buộc)',
+                            value: title,
+                            onChangeText: setTitle,
+                            multiline: true,
+                            numberOfLines: 3,
+                            style: styles.inputRow,
+                            iconStyle: { marginTop: 0 },
+
+
+                        })}
+                        {renderInputRow({
+                            icon: <MaterialCommunityIcons name="text-box-outline" size={24} color="#333" />,
+                            placeholder: "Nhập mô tả",
+                            value: description,
+                            onChangeText: setDescription,
+                            multiline: true,
+                            numberOfLines: 8,
+                            style: styles.inputRowc,
+                            iconStyle: { marginTop: 10 },
+                        })}
+
+
+                        {renderInputRow({
+                            icon: <MaterialCommunityIcons name="trophy-outline" size={24} color="#333" />,
+                            placeholder: 'Điểm',
+                            value: points,
+                            onChangeText: setPoints,
+                            multiline: false,
+                            numberOfLines: 1,
+                            style: styles.inputRow,
+                            iconStyle: { marginTop: 0 },
+
+
+                        })}
+                        <View style={styles.inputRowb}>
+                            <MaterialCommunityIcons name="calendar-blank-outline" size={24} color="#333" />
+                            <TouchableOpacity onPress={() => setDatePickerVisibility(true)} style={{ flex: 1 }}>
+
+                                <Text style={styles.input}>
+                                    {dueDate || 'Đặt ngày tới hạn'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <DateTimePickerModal
+                                isVisible={isDatePickerVisible}
+                                mode="datetime"
+                                locale="vi-VN"
+                                onConfirm={handleConfirm}
+                                onCancel={() => setDatePickerVisibility(false)}
+                                minimumDate={new Date()}
+                            />
+
+                        </View>
+                        <TouchableOpacity style={styles.inputRowb} onPress={pickDocument}>
+                            <MaterialCommunityIcons name="paperclip" size={24} color="#333" />
+                            <Text style={styles.attachText}>Thêm tệp đính kèm</Text>
+                        </TouchableOpacity>
+                        <FlatList
+                            data={selectedFiles}
+                            keyExtractor={(item, index) => index.toString()}
+                            renderItem={({ item, index }) => (
+                                <View style={styles.fileItem}>
+                                    {getFileIcon(item.name)}
+                                    <Text style={styles.fileName} numberOfLines={1}>{item.name}</Text>
+                                    <TouchableOpacity onPress={() => removeFile(index)}>
+                                        <Ionicons name="close-circle" size={24} color="red" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        />
+                    </View>
+                </View>
+            )}
+        />
+    );
+};
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#e7f3ff',
     },
     header: {
         flexDirection: 'row',
@@ -174,12 +272,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 20,
-        color: '#5f6368',
-        fontFamily: "Nunito_400Regular"
+        color: '#333',
+        fontFamily: "Jost_400Regular",
+        fontWeight: 'bold'
     },
     buttonheader: {
         color: '#fff',
-        backgroundColor: '#0641F0',
+        backgroundColor: '#0961F5',
         paddingHorizontal: 20,
         paddingVertical: 10,
         borderRadius: 10,
@@ -187,45 +286,82 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#fff',
         fontSize: 16,
-        fontFamily: "Nunito_400Regular",
-        fontWeight: 'semibold'
+        fontFamily: "Jost_400Regular",
+        fontWeight: 'bold'
     },
     inputContainer: {
-        paddingHorizontal: 20,
+        padding: 10,
     },
     inputRow: {
         flexDirection: 'row',
+        color: '#333',
         alignItems: 'center',
-        paddingVertical: 20,
-        borderBottomWidth: 1,
-        borderColor: '#ddd',
+        padding: 10,
+        paddingHorizontal: 20,
+        borderWidth: 1,
+        borderColor: '#0961F5',
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        marginTop: 10,
+        fontFamily: "Jost_400Regular",
+        fontWeight: 'bold',
+
     },
+    inputRowb: {
+        flexDirection: 'row',
+        color: '#333',
+        alignItems: 'center',
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#0961F5',
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        marginTop: 10,
+        fontFamily: "Jost_400Regular",
+        fontWeight: 'bold',
+
+    },
+    inputRowc: {
+        flexDirection: 'row',
+        alignItems: 'flex-start', // quan trọng để TextInput bắt đầu từ trên
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#0961F5',
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        marginTop: 20,
+        minHeight: 300, // đủ cao để nhập mô tả
+    },
+
     input: {
         marginLeft: 10,
-        fontSize: 18,
+        fontSize: 16,
         flex: 1,
-        fontFamily: "Nunito_400Regular"
+        fontFamily: "Jost_400Regular",
+        fontWeight: 'bold',
     },
+
     attachText: {
-        marginLeft: 10,
-        fontSize: 18,
-        color: '#555',
-        fontFamily: "Nunito_400Regular",
-        width: '100%'
+        marginLeft: 5,
+        fontSize: 16,
+        color: '#333',
+        fontFamily: "Jost_400Regular",
+        width: '100%',
+        fontWeight: 'bold'
+
     },
     fileItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
-        borderBottomWidth: 1,
-        borderColor: '#ddd',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderWidth: 1,
+        borderRadius: 30,
+        borderColor: '#0961F5',
+        backgroundColor: '#fff',
+        marginTop: 10,
     },
-    fileName: {
-        marginLeft: 10,
-        fontSize: 16,
-        color: '#333',
-        width: '80%',
-    },
+    fileName: { marginLeft: 10, fontSize: 16, color: '#333', width: '80%', fontWeight: 'bold' },
 });
 
 export default DetailExercise;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
-import { useFonts, Nunito_400Regular } from "@expo-google-fonts/nunito";
+import { useFonts, Jost_400Regular } from "@expo-google-fonts/nunito";
 import Header from './Header';
 
 export default function HomeScreen(props: any) {
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
         marginBottom: 20,
-        fontFamily: "Nunito_400Regular",
+        fontFamily: "Jost_400Regular",
         fontWeight: 'bold'
     },
     buttonContainer: {
@@ -82,13 +82,13 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     joinClassButton: {
-        backgroundColor: '#0641F0',
+        backgroundColor: '#0961F5',
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 5,
     },
     createText: {
-        color: '#0641F0',
+        color: '#0961F5',
         fontWeight: 'bold',
     },
     joinText: {

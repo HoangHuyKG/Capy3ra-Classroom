@@ -14,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from "axios";
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const CustomModalMenu = ({ visible, onClose }) => {
     const slideAnim = useRef(new Animated.Value(-200)).current;
@@ -67,14 +68,14 @@ const CustomModalMenu = ({ visible, onClose }) => {
             const userId = user._id;
 
             try {
-                const teachingClassesResponse = await axios.get(`http://10.0.2.2:3000/classes/${userId}`);
+                const teachingClassesResponse = await axios.get(`http://192.168.1.6:3000/classes/${userId}`);
                 setTeachingClasses(teachingClassesResponse.data);
             } catch {
                 setTeachingClasses([]);
             }
 
             try {
-                const joinedClassesResponse = await axios.get(`http://10.0.2.2:3000/joined-classes/${userId}`);
+                const joinedClassesResponse = await axios.get(`http://192.168.1.6:3000/joined-classes/${userId}`);
                 setJoinedClasses(joinedClassesResponse.data);
             } catch {
                 setJoinedClasses([]);
@@ -92,50 +93,57 @@ const CustomModalMenu = ({ visible, onClose }) => {
             <View style={styles.container}>
                 <Animated.View style={[styles.modalContent, { transform: [{ translateX: slideAnim }] }]}>
                     <View style={styles.boxlogo}>
-                        <Image style={styles.imagelogo} source={require("../assets/images/logo.png")} />
-                        <Text style={styles.title}>Capy3ra Classroom</Text>
+                        <Image style={styles.imagelogo} source={require("../assets/images/logohome.png")} />
+                        <Text style={styles.textheadera}>Capy3ra </Text>
+                                  <Text style={styles.textheaderb}>Classroom</Text>
                     </View>
 
                     <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("ClassroomList")}>
-                        <Feather name="home" size={24} color="black" />
+                        <Feather name="home" size={25} color="black" />
                         <Text style={styles.menuText}>Lớp học</Text>
                     </TouchableOpacity>
 
                     <Text style={styles.subTitle}>Lớp học đang giảng dạy</Text>
 
-                    {loading ? (
+                    {loading ? (    
                         <ActivityIndicator size="small" color="#000" />
                     ) : teachingClasses.length === 0 ? (
                         <Text style={{ fontStyle: 'italic', color: '#888', marginBottom: 10 }}>Hiện chưa có lớp học</Text>
                     ) : (
-                        <FlatList
-                            data={teachingClasses}
-                            keyExtractor={(item) => item._id}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={styles.boxitem}
-                                    onPress={() => {
-                                        onClose();
-                                        navigation.navigate("DetailClassroom", { classId: item._id });
-                                    }}
-                                >
-                                    <Image
-                                        style={styles.imagelogo}
-                                        source={{ uri: item.imageUrl || "https://picsum.photos/200" }}
-                                    />
-                                    <Text style={styles.course} numberOfLines={1} ellipsizeMode="tail">
-                                        {item.name}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                        />
+                        <View style={{ flexShrink: 1 }}>
+                            <FlatList
+                                data={teachingClasses}
+                                keyExtractor={(item) => item._id}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.boxitem}
+                                        onPress={() => {
+                                            onClose();
+                                            navigation.navigate("DetailClassroom", { classId: item._id });
+                                        }}
+                                    >
+                                        <Image
+                                            style={styles.imagelogo}
+                                            source={{ uri: item.imageUrl || "https://picsum.photos/200" }}
+                                        />
+                                        <Text style={styles.course} numberOfLines={1} ellipsizeMode="tail">
+                                            {item.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </View>
                     )}
 
                     <Text style={styles.subTitle}>Lớp học đang tham gia</Text>
 
                     {loading ? (
                         <ActivityIndicator size="small" color="#000" />
+                    ) : joinedClasses.length === 0 ? (
+                        <Text style={{ fontStyle: 'italic', color: '#888', marginBottom: 10 }}>Hiện chưa có lớp học</Text>
                     ) : (
+                        <View style={{ flexShrink: 1 }}>
+
                         <FlatList
                             data={joinedClasses}
                             keyExtractor={(item) => item._id}
@@ -157,19 +165,25 @@ const CustomModalMenu = ({ visible, onClose }) => {
                                 </TouchableOpacity>
                             )}
                         />
+                        </View>
+
                     )}
 
-                    <TouchableOpacity style={styles.menuItem}>
-                        <Feather name="settings" size={24} color="black" />
-                        <Text style={styles.menuText}>Cài đặt chung</Text>
-                    </TouchableOpacity>
+                    
 
                     <View style={styles.profileSection}>
-                        <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.jpg")} />
+                        <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
                         <View>
                             <Text style={styles.profileName}>{user.fullname}</Text>
                             <Text style={styles.profileEmail}>{user.email}</Text>
                         </View>
+                        <TouchableOpacity onPress={async () => {
+              await AsyncStorage.removeItem('token'); // Xóa token đã lưu trong AsyncStorage
+              await AsyncStorage.removeItem('user');  // Xóa thông tin user đã lưu
+              navigation.navigate('LoginDetail'); // Chuyển hướng người dùng về màn hình đăng nhập
+            }} style={styles.logoutButton}>
+        <MaterialCommunityIcons name="logout" size={30} color="#E53935" />
+    </TouchableOpacity>
                     </View>
                 </Animated.View>
 
@@ -184,6 +198,16 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: "row",
     },
+    logoutButton: {
+        padding: 8,
+        marginLeft: 20,
+        
+    },
+    textheadera: { 
+        fontFamily: "Jost_400Regular", 
+        fontSize: 20,
+        fontWeight: "bold", color: '#0961F5' },
+      textheaderb: { fontFamily: "Jost_400Regular", fontSize: 18, fontWeight: "semibold", color: '#333' },
     modalContent: {
         width: "75%",
         height: "100%",
@@ -200,15 +224,17 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        fontWeight: 'semibold',
+        fontWeight: 'bold',
         marginBottom: 10,
-        fontFamily: "Nunito_400Regular"
+        fontFamily: "Jost_400Regular"
     },
     subTitle: {
-        color: "#666",
+        color: "#333",
         marginTop: 10,
         marginBottom: 5,
-        fontFamily: "Nunito_400Regular"
+        fontFamily: "Jost_400Regular",
+        fontWeight: "bold",
+
     },
     menuItem: {
         paddingVertical: 20,
@@ -220,8 +246,10 @@ const styles = StyleSheet.create({
     },
     menuText: {
         fontSize: 18,
-        marginLeft: 20,
-        fontFamily: "Nunito_400Regular"
+        marginLeft: 10,
+        fontFamily: "Jost_400Regular",
+        fontWeight: "bold",
+        color: '#333'
     },
     boxitem: {
         flexDirection: 'row',
@@ -231,9 +259,14 @@ const styles = StyleSheet.create({
     course: {
         fontSize: 16,
         color: "#333",
-        fontFamily: "Nunito_400Regular"
+        fontFamily: "Jost_400Regular",
+        
     },
     profileSection: {
+        borderBottomWidth: 1,
+        borderTopWidth: 1,
+        paddingVertical: 10,
+        borderColor: '#ddd',
         flexDirection: "row",
         alignItems: "center",
         marginVertical: 20
@@ -246,7 +279,8 @@ const styles = StyleSheet.create({
     },
     boxlogo: {
         flexDirection: "row",
-        alignItems: "center"
+        alignItems: "center",
+        paddingVertical: 10
     },
     imageuser: {
         width: 50,
@@ -257,11 +291,11 @@ const styles = StyleSheet.create({
     profileName: {
         fontWeight: "bold",
         fontSize: 16,
-        fontFamily: "Nunito_400Regular"
+        fontFamily: "Jost_400Regular"
     },
     profileEmail: {
         color: "#555",
-        fontFamily: "Nunito_400Regular"
+        fontFamily: "Jost_400Regular"
     },
 });
 

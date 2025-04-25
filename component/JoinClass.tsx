@@ -1,59 +1,101 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
+
 const JoinClassScreen = (props) => {
   const { navigation } = props;
   const [modalVisible, setModalVisible] = useState(false);
   const [classCode, setClassCode] = useState('');
   const [classPassword, setClassPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [teachingClasses, setTeachingClasses] = useState([]);
 
-  
+  const showToast = (type, title, message) => {
+    Toast.show({
+      type,
+      text1: title,
+      text2: message,
+      position: 'top',
+      visibilityTime: 3000,
+      topOffset: 50,
+    });
+  };
+  useEffect(() => {
+    const fetchTeachingClasses = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('user');
+        if (!userData) return;
+
+        const user = JSON.parse(userData);
+        const userId = user?._id;
+        if (!userId) return;
+
+        const response = await fetch(`http://192.168.1.6:3000/classes/${userId}`);
+        if (response.status === 404) {
+          setTeachingClasses([]);
+          return;
+        }
+
+        const data = await response.json();
+        setTeachingClasses(data);
+      } catch (error) {
+        console.error("Lỗi khi lấy lớp đang dạy:", error);
+        setTeachingClasses([]);
+      }
+    };
+
+    fetchTeachingClasses();
+  }, []);
 
   const handleJoinClass = async () => {
-      try {
-          const userData = await AsyncStorage.getItem('user'); // Lấy dữ liệu người dùng từ AsyncStorage
-          const user = JSON.parse(userData); // Phân tích cú pháp dữ liệu JSON
-          const userId = user ? user._id : null; // Lấy ID người dùng
-  
-          if (!userId) {
-              alert("Không tìm thấy thông tin người dùng!");
-              return;
-          }
-  
-          const response = await fetch('http://10.0.2.2:3000/join-class', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ classCode, classPassword, userId }),
-          });
-  
-          const data = await response.json();
-  
-          if (response.ok) {
-              // Tham gia thành công
-              alert(data.message);
-              // Chuyển hướng hoặc cập nhật giao diện
-              navigation.navigate("ClassroomList"); // Chuyển hướng đến danh sách lớp học
-          } else {
-              // Thông báo lỗi
-              setErrorMessage(data.message);
-              setModalVisible(true);
-          }
-      } catch (error) {
-          console.error("Lỗi khi tham gia lớp học:", error);
-          setErrorMessage("Lỗi server!");
-          setModalVisible(true);
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      const user = JSON.parse(userData);
+      const userId = user ? user._id : null;
+
+      if (!userId) {
+        showToast("error", "Lỗi", "Không tìm thấy thông tin người dùng!");
+        return;
       }
+
+      const response = await fetch('http://192.168.1.6:3000/join-class', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classCode, classPassword, userId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Kiểm tra nếu mã lớp nhập vào nằm trong danh sách lớp mà người dùng đang dạy
+        const isTeachingThisClass = teachingClasses.some(cls => cls.code === classCode);
+        if (isTeachingThisClass) {
+          Toast.show({
+            type: 'error',
+            text1: 'Bạn là người tạo lớp này',
+            text2: 'Không thể tham gia lớp học của chính mình.',
+          });
+          return;
+        }
+
+      } else {
+        setErrorMessage(data.message || "Tham gia thất bại!");
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tham gia lớp học:", error);
+      setErrorMessage("Lỗi kết nối server!");
+      setModalVisible(true);
+    }
   };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.navigate("ClassroomList")}>
-          <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#5f6368" />
+          <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>Tham gia lớp học</Text>
         <TouchableOpacity style={styles.buttonheader} onPress={handleJoinClass}>
@@ -62,23 +104,33 @@ const JoinClassScreen = (props) => {
       </View>
 
       <View style={styles.containerchild}>
-        <Text style={styles.instruction}>Hỏi giáo viên của bạn để biết mã lớp, mật khẩu rồi nhập vào bên dưới.</Text>
+        <Text style={styles.instruction}>
+          Hỏi giáo viên của bạn để biết mã lớp, mật khẩu rồi nhập vào bên dưới.
+        </Text>
 
-        <Text style={styles.label}>Mã Lớp</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập mã lớp"
-          value={classCode}
-          onChangeText={setClassCode}
-        />
-        <Text style={styles.label}>Mật Khẩu Lớp</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập mật khẩu"
-          secureTextEntry
-          value={classPassword}
-          onChangeText={setClassPassword}
-        />
+        <View style={styles.inputContainer}>
+        <MaterialCommunityIcons name="key-outline" size={24} color="#333" style={styles.inputIcon} />
+  <TextInput
+    style={styles.input}
+    placeholder="Nhập mã lớp"
+    value={classCode}
+    onChangeText={setClassCode}
+    placeholderTextColor="#999"
+  />
+</View>
+
+<View style={styles.inputContainer}>
+<MaterialCommunityIcons name="lock-outline" size={24} color="#333" style={styles.inputIcon} />
+  <TextInput
+    style={styles.input}
+    placeholder="Nhập mật khẩu"
+    secureTextEntry
+    value={classPassword}
+    onChangeText={setClassPassword}
+    placeholderTextColor="#999"
+  />
+</View>
+
       </View>
 
       <Modal
@@ -104,59 +156,59 @@ const JoinClassScreen = (props) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  containersmall: {
-    padding: 20
-  },
+  container: { flex: 1, backgroundColor: '#e7f3ff' },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#fff', // Thêm nền trắng cho header
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 8, // Tăng elevation lên cao hơn để dễ thấy bóng
-    width: '100%'
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 15, backgroundColor: '#fff',
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1, shadowRadius: 3, elevation: 8,
   },
-
-  title: {
-    fontSize: 20,
-    color: '#5f6368',
-    fontFamily: "Nunito_400Regular"
+  title: { fontSize: 20, color: '#333', fontWeight: 'bold' },
+  buttonheader: {
+    backgroundColor: '#0961F5', paddingHorizontal: 20,
+    paddingVertical: 10, borderRadius: 10,
   },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   containerchild: { paddingHorizontal: 20 },
-  imageuser: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    marginRight: 20,
+  instruction: {
+    fontSize: 14, color: '#555', marginVertical: 20,
+    fontWeight: 'bold',
   },
-  userInfobox: { flexDirection: 'column', width: '100%' },
-  profileSection: { marginBottom: 10, width: '100%' },
-  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 10 },
-  userInfo: { flexDirection: 'row', width: '100%' },
-  userName: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  userEmail: { fontSize: 14, color: '#666' },
-  switchAccount: { color: '#0061FF', fontSize: 16, marginBottom: 20, textAlign: 'center', fontFamily: "Nunito_400Regular", },
-  instruction: { fontSize: 14, color: '#555', marginBottom: 20, fontFamily: "Nunito_400Regular", },
-  label: { fontSize: 16, marginBottom: 5, color: '#333', fontFamily: "Nunito_400Regular" },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 5, padding: 10, marginBottom: 15, backgroundColor: '#fff', fontFamily: "Nunito_400Regular", marginTop: 10 },
-  buttonheader: { color: '#fff', backgroundColor: '#0641F0', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, alignItems: 'center', fontFamily: "Nunito_400Regular", },
-  buttonText: { color: '#fff', fontSize: 16, fontFamily: "Nunito_400Regular", fontWeight: 'semibold' },
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)' },
-  modalContent: { width: '90%', backgroundColor: '#fff', padding: 20, borderRadius: 10, fontFamily: "Nunito_400Regular" },
-  modalTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, fontFamily: "Nunito_400Regular" },
-  modalMessage: { fontSize: 16, color: '#333', marginBottom: 15, fontFamily: "Nunito_400Regular" },
-  modalOk: { color: '#0641F0', fontSize: 20, fontWeight: 'bold', fontFamily: "Nunito_400Regular" },
+  
+  modalContainer: {
+    flex: 1, justifyContent: 'center',
+    alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)'
+  },
+  modalContent: {
+    width: '90%', backgroundColor: '#fff',
+    padding: 20, borderRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 24, fontWeight: 'bold', marginBottom: 10,
+  },
+  modalMessage: { fontSize: 16, color: '#333', marginBottom: 15 },
+  modalOk: { color: '#0961F5', fontSize: 20, fontWeight: 'bold' },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#0961F5',
+    borderRadius: 30,
+    paddingHorizontal: 15,
+    marginTop: 20,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  
 });
-
 
 export default JoinClassScreen;

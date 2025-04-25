@@ -14,16 +14,17 @@ const Header = () => {
       <View style={styles.boxheader}>
         <View style={styles.boxheaderb}>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
-        <MaterialIcons name="menu" size={30} color="#5f6368" />
+        <MaterialIcons name="menu" size={35} color="#333" />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate("ClassroomList")} style={styles.textbox}>
+          <Image style={styles.imagelogo} source={require('../assets/images/logohome.png')}/>
           <Text style={styles.textheadera}>Capy3ra </Text>
           <Text style={styles.textheaderb}>Classroom</Text>
         </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={()=>navigation.navigate("ProfileSettingsScreen")}>
-        <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.jpg")} />
+        <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
 
         </TouchableOpacity>
       </View>
@@ -47,6 +48,10 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 10,
   },
+  imagelogo: { 
+    width: 40,
+    height: 40
+  },
   textbox: {
     marginLeft: 20,
     flexDirection: 'row',
@@ -55,10 +60,10 @@ const styles = StyleSheet.create({
   boxheaderb: {flexDirection: "row", alignItems: "center", width: '90%' },
   boxheader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: '90%' },
   textheadera: { 
-    fontFamily: "Nunito_400Regular", 
-    fontSize: 18,
-    fontWeight: "700", color: '#5f6368' },
-  textheaderb: { fontFamily: "Nunito_400Regular", fontSize: 16, fontWeight: "semibold", color: '#5f6368' },
+    fontFamily: "Jost_400Regular", 
+    fontSize: 20,
+    fontWeight: "bold", color: '#0961F5' },
+  textheaderb: { fontFamily: "Jost_400Regular", fontSize: 18, fontWeight: "semibold", color: '#333' },
   imageuser: { width: 40, height: 40, borderRadius: 20 },
 });
 
