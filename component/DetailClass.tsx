@@ -22,23 +22,7 @@ const DetailClassroom = () => {
     const [visibleMenu, setVisibleMenu] = useState(null);
     const [notifications, setNotifications] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [userId, setUserId] = useState(null);
-
-    useEffect(() => {
-        const fetchUserFromStorage = async () => {
-            try {
-                const storedUser = await AsyncStorage.getItem('user');
-                if (storedUser !== null) {
-                    const parsedUser = JSON.parse(storedUser);
-                    setUserId(parsedUser._id);
-                }
-            } catch (error) {
-                console.error('❌ Lỗi lấy user từ AsyncStorage:', error);
-            }
-        };
-        fetchUserFromStorage();
-    }, []);
-
+    const [userImage, setUserImage] = useState<string | null>(null);
 
     useEffect(() => {
         setLoading(true);
@@ -48,11 +32,15 @@ const DetailClassroom = () => {
         }
     }, [classId]);
 
+    useEffect(() => {
+        if (classData && classData.userId) {
+            fetchUserImage(classData.userId);
+        }
+    }, [classData]);
 
     const fetchClassDetails = async () => {
         try {
-            const response = await axios.get(`http://192.168.1.6:3000/class/${classId}`);
-            console.log(classData)
+            const response = await axios.get(`http://10.10.10.10:3000/class/${classId}`);
             setClassData(response.data);
         } catch (error) {
             if (!classId) {
@@ -63,7 +51,6 @@ const DetailClassroom = () => {
             
             console.error("❌ Lỗi khi lấy dữ liệu lớp học:", error);
             console.log("📌 classId từ route:", classId);
-
             setError("Không thể tải dữ liệu lớp học.");
         } finally {
             setLoading(false);
@@ -72,7 +59,7 @@ const DetailClassroom = () => {
 
     const fetchNotifications = async () => {
         try {
-            const response = await axios.get(`http://192.168.1.6:3000/notifications/class/${classId}`);
+            const response = await axios.get(`http://10.10.10.10:3000/notifications/class/${classId}`);
             setNotifications(response.data);
         } catch (error) {
             console.error("❌ Lỗi khi lấy dữ liệu thông báo:", error);
@@ -80,10 +67,25 @@ const DetailClassroom = () => {
         }
     };
 
+    const fetchUserImage = async (userId) => {
+        try {
+            const response = await axios.get(`http://10.10.10.10:3000/user/${userId}`);
+            const user = response.data;
+            if (user && user.image) {
+                setUserImage(user.image);
+            } else {
+                setUserImage(null);
+            }
+        } catch (error) {
+            console.error('❌ Lỗi khi tải ảnh người dùng:', error);
+            setUserImage(null);
+        }
+    };
+
     const openFile = async (fileUrl) => {
         try {
             const formattedUrl = fileUrl.replace(/\\/g, '/');
-            const fullUrl = `http://192.168.1.6:3000/${formattedUrl}`;
+            const fullUrl = `http://10.10.10.10:3000/${formattedUrl}`;
             const supported = await Linking.canOpenURL(fullUrl);
             if (supported) {
                 await Linking.openURL(fullUrl);
@@ -119,7 +121,7 @@ const DetailClassroom = () => {
 
     const deleteNotification = async (id) => {
         try {
-            await axios.delete(`http://192.168.1.6:3000/notifications/${id}`);
+            await axios.delete(`http://10.10.10.10:3000/notifications/${id}`);
             await fetchNotifications();
             Toast.show({
                 type: 'success',
@@ -141,7 +143,7 @@ const DetailClassroom = () => {
     const getFileIcon = (filename) => {
         const extension = filename.split('.').pop().toLowerCase();
         switch (extension) {
-            case 'pdf': return <MaterialCommunityIcons name="file-pdf-box" size={24} color="#E53935" />;
+            case 'pdf': return <MaterialCommunityIcons name="file-pdf-box" size={24} color="#E53935" />; 
             case 'doc':
             case 'docx': return <MaterialCommunityIcons name="file-word-box" size={24} color="#1E88E5" />;
             case 'xls':
@@ -199,24 +201,34 @@ const DetailClassroom = () => {
                                 </View>
                             </ImageBackground>
 
-                            {userId === classData?.userId && (
-
-                                <TouchableOpacity style={styles.notify} onPress={() => navigation.navigate("PostNotificationScreen", { classId })}>
-                                    <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
-                                    <Text style={styles.notifytext}>Thông báo tin gì đó cho lớp</Text>
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity style={styles.notify} onPress={() => navigation.navigate("PostNotificationScreen", { classId })}>
+                                <Image
+                                    style={styles.imageuser}
+                                    source={
+                                        userImage
+                                        ? { uri: userImage }
+                                        : require("../assets/images/usernobackgr.png")
+                                    }
+                                    />
+                                <Text style={styles.notifytext}>Thông báo tin gì đó cho lớp</Text>
+                            </TouchableOpacity>
                         </View>
                     }
                     renderItem={({ item }) => (
                         <View style={styles.cardtach}>
                             <View style={styles.cardtop}>
                                 <View style={styles.cardtopa}>
-                                    <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
+                                    <Image
+                                        style={styles.imageuser}
+                                        source={
+                                            userImage
+                                            ? { uri: userImage }
+                                            : require("../assets/images/usernobackgr.png")
+                                        }
+                                    />
                                     <Text style={styles.textcardname}>{item.username ?? "Người dùng"}</Text>
                                 </View>
-
-                                {userId === classData?.userId && (
+                                {classData?.userId === item.userId && (
                                     <Menu
                                         contentStyle={styles.menu}
                                         visible={visibleMenu === item._id}
@@ -235,7 +247,6 @@ const DetailClassroom = () => {
                             </View>
 
                             <Text style={styles.textcard} selectable={true}>{item.content}</Text>
-
 
                             {item.fileUrl && Array.isArray(item.fileUrl) && item.fileUrl.length > 0 && (
                                 <View>

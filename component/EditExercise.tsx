@@ -28,7 +28,7 @@ const EditExercise = (props: any) => {
         if (exerciseId) {
             const fetchExercise = async () => {
                 try {
-                    const response = await axios.get(`http://192.168.1.6:3000/exercises/${exerciseId}`);
+                    const response = await axios.get(`http://10.10.10.10:3000/exercises/${exerciseId}`);
                     
                     const exercise = response.data;
                     const dateObj = new Date(exercise.dueDate);
@@ -100,7 +100,7 @@ const EditExercise = (props: any) => {
         });
 
         try {
-            const response = await axios.put(`http://192.168.1.6:3000/exercises/${exerciseId}`, formData, {
+            const response = await axios.put(`http://10.10.10.10:3000/exercises/${exerciseId}`, formData, {
                 transformRequest: () => formData,
                 headers: {
                     'Content-Type': 'multipart/form-data',

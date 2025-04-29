@@ -14,7 +14,7 @@ const EditClassInfoScreen = () => {
 
   useEffect(() => {
     if (classId) {
-      fetch(`http://192.168.1.6:3000/class/${classId}`)
+      fetch(`http://10.10.10.10:3000/class/${classId}`)
         .then(response => response.json())
         .then(data => {
           setClassInfo(data);
@@ -45,7 +45,7 @@ const EditClassInfoScreen = () => {
       return;
     }
     try {
-      const response = await fetch(`http://192.168.1.6:3000/class/${classId}`, {
+      const response = await fetch(`http://10.10.10.10:3000/class/${classId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(classInfo)
@@ -85,7 +85,7 @@ const EditClassInfoScreen = () => {
           text: "Xóa", style: "destructive",
           onPress: async () => {
             try {
-              const response = await fetch(`http://192.168.1.6:3000/class/${classId}`, { method: "DELETE" });
+              const response = await fetch(`http://10.10.10.10:3000/class/${classId}`, { method: "DELETE" });
               if (response.status === 200) {
                 Toast.show({
                   type: 'success',

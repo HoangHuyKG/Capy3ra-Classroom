@@ -22,37 +22,53 @@ const CustomModalMenu = ({ visible, onClose }) => {
     const [teachingClasses, setTeachingClasses] = useState([]);
     const [joinedClasses, setJoinedClasses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState({ fullname: "Tên người dùng", email: "Email" });
-
+    const [user, setUser] = useState({ fullname: "Tên người dùng", email: "Email", image: null });
+    const [userId, setUserId] = useState<string | null>(null);
     useEffect(() => {
-        const fetchUserInfo = async () => {
-            try {
-                const userData = await AsyncStorage.getItem('user');
-                if (userData) {
-                    setUser(JSON.parse(userData));
-                }
-            } catch (error) {
-                console.error("Lỗi khi lấy thông tin user:", error);
-            }
-        };
-
         if (visible) {
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 200,
-                useNativeDriver: true,
-            }).start();
-            fetchUserInfo();
-            fetchClasses();
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }).start();
+    
+          getUserIdFromStorage();
         } else {
-            Animated.timing(slideAnim, {
-                toValue: -200,
-                duration: 200,
-                useNativeDriver: true,
-            }).start();
+          Animated.timing(slideAnim, {
+            toValue: -200,
+            duration: 200,
+            useNativeDriver: true,
+          }).start();
         }
-    }, [visible]);
-
+      }, [visible]);
+      const getUserIdFromStorage = async () => {
+        try {
+          const userData = await AsyncStorage.getItem('user');
+          if (userData) {
+            const userObj = JSON.parse(userData);
+            setUserId(userObj._id);
+          }
+        } catch (error) {
+          console.error("Lỗi lấy userId từ AsyncStorage:", error);
+        }
+      };
+      useEffect(() => {
+        if (userId) {
+          fetchUserInfo();
+          fetchClasses();
+        }
+      }, [userId]);
+      const fetchUserInfo = async () => {
+        try {
+          const response = await axios.get(`http://10.10.10.10:3000/user/${userId}`);
+          const userData = response.data;
+          if (userData) {
+            setUser(userData);
+          }
+        } catch (error) {
+          console.error("Lỗi lấy thông tin user:", error);
+        }
+      };
     const fetchClasses = async () => {
         try {
             setLoading(true);
@@ -68,14 +84,14 @@ const CustomModalMenu = ({ visible, onClose }) => {
             const userId = user._id;
 
             try {
-                const teachingClassesResponse = await axios.get(`http://192.168.1.6:3000/classes/${userId}`);
+                const teachingClassesResponse = await axios.get(`http://10.10.10.10:3000/classes/${userId}`);
                 setTeachingClasses(teachingClassesResponse.data);
             } catch {
                 setTeachingClasses([]);
             }
 
             try {
-                const joinedClassesResponse = await axios.get(`http://192.168.1.6:3000/joined-classes/${userId}`);
+                const joinedClassesResponse = await axios.get(`http://10.10.10.10:3000/joined-classes/${userId}`);
                 setJoinedClasses(joinedClassesResponse.data);
             } catch {
                 setJoinedClasses([]);
@@ -172,7 +188,10 @@ const CustomModalMenu = ({ visible, onClose }) => {
                     
 
                     <View style={styles.profileSection}>
-                        <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
+                        <Image
+                        style={styles.imageuser}
+                        source={user.image ? { uri: user.image } : require("../assets/images/usernobackgr.png")}
+                        />
                         <View>
                             <Text style={styles.profileName}>{user.fullname}</Text>
                             <Text style={styles.profileEmail}>{user.email}</Text>

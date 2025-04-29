@@ -22,7 +22,7 @@ const LoginDetail = (props: any) => {
     }
 
     try {
-      const response = await fetch('http://192.168.1.6:3000/login', {
+      const response = await fetch('http://10.10.10.10:3000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

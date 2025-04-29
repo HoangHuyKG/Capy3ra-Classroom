@@ -1,29 +1,46 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, FlatList, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Header from './Header';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRoute } from '@react-navigation/native';
+import axios from 'axios'; // Dùng axios để gọi API
 
-const data = [
-  { id: '1', name: 'Nguyễn Duy Đạt', date: '12:00, 13 thg 1, 2025' },
-  { id: '2', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '3', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '4', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '5', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '6', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '7', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '8', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '9', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-  { id: '10', name: 'Hoàng Gia Huy', date: '12:00, 13 thg 1, 2025' },
-];
-
-const AssignmentScreen = (props: any) => {
+const AssignmentScreen = ({ navigation }) => {
   const route = useRoute();
-  const { navigation } = props;
-  const classId = route.params?.classId; // Nhận classId từ params
+  const classId = route.params?.classId;
+  const exerciseId = route.params?.exerciseId;
+
+  const [submissionsData, setSubmissionsData] = useState([]);
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      try {
+        const response = await axios.get(`http://10.10.10.10:3000/exercise-submissions?exerciseId=${exerciseId}`);
+        const submissions = response.data.submissions;
+  
+        const mapped = submissions.map(sub => ({
+          id: sub.submissionId,
+          name: sub.fullname || "Không rõ",
+          date: new Date(sub.submittedAt).toLocaleString('vi-VN')
+        }));
+  
+        setSubmissionsData(mapped);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu:", error);
+      }
+    };
+  
+    fetchSubmissions();
+  }, [exerciseId]);
+  
+
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.itemContainer} onPress={() => navigation.navigate('DetailSubmissions', { classId: classId })}>
+    <TouchableOpacity style={styles.itemContainer} onPress={() => navigation.navigate('DetailSubmissions', {
+      classId,
+      submissionId: item.id,
+      exerciseId
+    })}
+    >
       <View style={styles.iconContainer}>
         <Ionicons name="document-text-outline" size={24} color="#fff" />
       </View>
@@ -37,19 +54,14 @@ const AssignmentScreen = (props: any) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("GiveExercise", { activeTab: 'clipboard', classId: classId })}>
+        <TouchableOpacity onPress={() => navigation.navigate("GiveExercise", { activeTab: 'clipboard', classId })}>
           <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>Học viên đã nộp bài</Text>
-
       </View>
-
-
       <View style={styles.containersmall}>
-
-
         <FlatList
-          data={data}
+          data={submissionsData}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
         />
@@ -57,6 +69,7 @@ const AssignmentScreen = (props: any) => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#e7f3ff' },

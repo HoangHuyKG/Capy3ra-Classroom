@@ -32,7 +32,7 @@ const JoinClassScreen = (props) => {
         const userId = user?._id;
         if (!userId) return;
 
-        const response = await fetch(`http://192.168.1.6:3000/classes/${userId}`);
+        const response = await fetch(`http://10.10.10.10:3000/classes/${userId}`);
         if (response.status === 404) {
           setTeachingClasses([]);
           return;
@@ -60,7 +60,7 @@ const JoinClassScreen = (props) => {
         return;
       }
 
-      const response = await fetch('http://192.168.1.6:3000/join-class', {
+      const response = await fetch('http://10.10.10.10:3000/join-class', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ classCode, classPassword, userId }),

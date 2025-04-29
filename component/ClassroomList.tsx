@@ -34,11 +34,11 @@ const ClassroomList = ({ navigation }) => {
 
                 try {
                     const [teachingClassesResponse, joinedClassesResponse] = await Promise.all([
-                        axios.get(`http://192.168.1.6:3000/classes/${userId}`).catch(error => {
+                        axios.get(`http://10.10.10.10:3000/classes/${userId}`).catch(error => {
                             if (error.response?.status === 404) return { data: [] };
                             throw error;
                         }),
-                        axios.get(`http://192.168.1.6:3000/joined-classes/${userId}`).catch(error => {
+                        axios.get(`http://10.10.10.10:3000/joined-classes/${userId}`).catch(error => {
                             if (error.response?.status === 404) return { data: [] };
                             throw error;
                         })

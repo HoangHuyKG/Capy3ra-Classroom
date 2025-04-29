@@ -6,10 +6,51 @@ import Header from './Header';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRoute } from '@react-navigation/native';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+
 const DetailSubmissions = (props: any) => {
   const route = useRoute();
   const { navigation } = props;
   const classId = route.params?.classId; // Nhận classId từ params
+  const [studentName, setStudentName] = useState('');
+  const [fileName, setFileName] = useState('');
+  const { submissionId } = route.params;
+  const exerciseId = route.params?.exerciseId;
+  const [score, setScore] = useState('');
+const [comment, setComment] = useState('');
+
+useEffect(() => {
+  const fetchSubmission = async () => {
+    try {
+      const res = await axios.get(`http://10.10.10.10:3000/submission/${submissionId}`);
+      const { name, filePath, score, comment } = res.data;
+      setStudentName(name);
+      setFileName(filePath.split('/').pop());
+      setScore(score?.toString() || '');
+      setComment(comment || '');
+    } catch (error) {
+      console.error('❌ Lỗi khi tải submission:', error);
+    }
+  };
+
+  fetchSubmission();
+}, [submissionId]);
+
+const handleSubmit = async () => {
+  try {
+    await axios.put(`http://10.10.10.10:3000/submission/${submissionId}/grade`, {
+      score: score,
+      comment: comment,
+    });
+
+    alert('✅ Chấm điểm thành công!');
+    navigation.goBack(); // hoặc điều hướng tới màn khác nếu muốn
+  } catch (error) {
+    console.error('❌ Lỗi khi chấm điểm:', error);
+    alert('❌ Chấm điểm thất bại');
+  }
+};
 
   const getFileIcon = (filename) => {
     const extension = filename.split('.').pop()?.toLowerCase();
@@ -42,37 +83,54 @@ const DetailSubmissions = (props: any) => {
     <View style={styles.container}>
       
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("AssignmentScreen", { activeTab: 'clipboard', classId: classId })}>
+        <TouchableOpacity onPress={() => navigation.navigate("AssignmentScreen", { activeTab: 'clipboard', classId: classId, exerciseId})}>
           <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>Bài nộp học viên</Text>
         <TouchableOpacity style={styles.buttonheader}>
-          <Text style={styles.buttonText}>Gửi</Text>
+        <TouchableOpacity style={styles.buttonheader} onPress={handleSubmit}>
+  <Text style={styles.buttonText}>Gửi</Text>
+</TouchableOpacity>
+
         </TouchableOpacity>
       </View>
 
 
       <View style={styles.inputContainer}>
         <View style={styles.inputRow}>
-          <Text style={styles.name} numberOfLines={1}>Nguyễn Duy Đạt</Text>
+        <Text style={styles.name} numberOfLines={1}>{studentName}</Text>
+
         </View>
 
 
 
         <View style={styles.inputRowb}>
           <MaterialCommunityIcons name="message-reply-text-outline" size={24} color="#333" style={{marginTop: 10}}/>
-          <TextInput style={styles.attachText} placeholder='Viết nhận xét của bạn' multiline={true}
-            numberOfLines={4}
-            textAlignVertical="top"></TextInput>
+          <TextInput
+  style={styles.attachText}
+  placeholder='Viết nhận xét của bạn'
+  multiline={true}
+  numberOfLines={4}
+  textAlignVertical="top"
+  value={comment}
+  onChangeText={setComment}
+/>
         </View>
         <View style={styles.inputRow}>
         <MaterialCommunityIcons name="trophy-outline" size={24} color="#333" />
-          <TextInput style={styles.attachText} placeholder='Viết điểm bạn chấm vào đây'></TextInput>
+        <TextInput
+  style={styles.attachText}
+  placeholder='Viết điểm bạn chấm vào đây'
+  value={score}
+  onChangeText={setScore}
+  keyboardType='numeric'
+/>
         </View>
           <Text style={styles.textfile}>Bài nộp của học viên: </Text>
         <View style={styles.fileItem}>
           {getFileIcon('Screenshot_20250419_144309_Tng S Mnh Nht.jpg')}
-          <Text style={styles.fileName} numberOfLines={1}>{'Screenshot_20250419_144309_Tng S Mnh Nht.jpg'}</Text>
+          <Text style={styles.fileName} numberOfLines={1}>{fileName}</Text>
+
           
         </View>
       </View>

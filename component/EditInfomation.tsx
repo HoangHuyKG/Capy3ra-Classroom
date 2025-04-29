@@ -1,19 +1,50 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, Image, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, Text, Image, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import axios from 'axios'; // nhớ cài: npm install axios
 
 const EditProfile = (props: any) => {
-    const { navigation } = props;
+    const { navigation, route } = props;
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [image, setImage] = useState(null);
+    const [image, setImage] = useState<string | null>(null);
     const [phoneNumber, setPhoneNumber] = useState('');
     const [gender, setGender] = useState('');
     const [birthday, setBirthday] = useState<Date | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+
+    const userId = route?.params?.userId; // lấy userId từ tham số truyền vào màn hình
+
+    useEffect(() => {
+        if (userId) {
+            fetchUserInfo();
+        }
+    }, [userId]);
+
+    const fetchUserInfo = async () => {
+        try {
+            const response = await axios.get(`http://10.10.10.10:3000/user/${userId}`);
+            const user = response.data;
+    
+            if (user) {
+                setName(user.fullname ?? '');
+                setEmail(user.email ?? '');
+                setPhoneNumber(user.phoneNumber ?? '');
+                setGender(user.gender ?? '');
+                setBirthday(user.birthday ? new Date(user.birthday) : null);
+                setImage(user.image ?? null);
+            } else {
+                Alert.alert('Thông báo', 'Không tìm thấy thông tin người dùng.');
+            }
+        } catch (error) {
+            console.error('Lỗi khi tải thông tin người dùng:', error);
+            Alert.alert('Lỗi', 'Không thể tải thông tin người dùng.');
+        }
+    };
+    
 
     const handleImagePicker = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -46,21 +77,49 @@ const EditProfile = (props: any) => {
         }/${date.getFullYear()}`;
     };
 
-    const handleSave = () => {
-        console.log({
-            name,
-            email,
-            phoneNumber,
-            gender,
-            birthday: birthday ? formatDate(birthday) : 'Ngày sinh chưa chọn',
-            image,
-        });
+    const handleSave = async () => {
+        try {
+            const dataToUpdate = new FormData();
+    
+            // Luôn gửi đầy đủ các trường, kể cả nếu không sửa
+            dataToUpdate.append('fullname', name || '');
+            dataToUpdate.append('email', email || '');
+            dataToUpdate.append('phoneNumber', phoneNumber || '');
+            dataToUpdate.append('gender', gender || '');
+            dataToUpdate.append('birthday', birthday ? birthday.toISOString() : '');
+    
+            // Nếu có chọn ảnh mới
+            if (image) {
+                const fileExtension = image.split('.').pop();
+                const formImage = {
+                    uri: image,
+                    name: `avatar.${fileExtension}`,
+                    type: `image/${fileExtension}`,
+                };
+                dataToUpdate.append('image', formImage);
+            }
+    
+            const response = await axios.put(`http://10.10.10.10:3000/user/${userId}`, dataToUpdate, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+    
+            Alert.alert('Thành công', 'Cập nhật thông tin thành công.');
+            navigation.goBack();
+        } catch (error) {
+            console.error('Lỗi khi lưu thông tin:', error.response ? error.response.data : error.message);
+            Alert.alert('Lỗi', 'Không thể lưu thông tin.');
+        }
     };
+    
+    
+    
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.navigate('ProfileSettingsScreen')}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
                     <MaterialCommunityIcons name="keyboard-backspace" size={30} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.title}>Chỉnh sửa thông tin</Text>
@@ -72,14 +131,15 @@ const EditProfile = (props: any) => {
             <View style={styles.containersmall}>
                 <View style={styles.avatarWrapper}>
                     <TouchableOpacity onPress={handleImagePicker}>
-                        <Image
-                            source={
-                                image
-                                    ? { uri: image }
-                                    : require('../assets/images/usernobackgr.png')
-                            }
-                            style={styles.image}
-                        />
+                    <Image
+                        source={
+                            image
+                                ? { uri: image }  // Sử dụng URL hình ảnh được trả về từ backend
+                                : require('../assets/images/usernobackgr.png')  // Hình ảnh mặc định nếu không có hình
+                        }
+                        style={styles.image}
+                    />
+
                         <View style={styles.editIconContainer}>
                             <MaterialCommunityIcons name="pencil-circle-outline" size={28} color="#0961F5" />
                         </View>
@@ -118,6 +178,7 @@ const EditProfile = (props: any) => {
                     />
                 </View>
 
+
                 <View style={styles.inputContainer}>
                     <MaterialCommunityIcons name="gender-male-female" size={20} color="#333" />
                     <Picker
@@ -131,6 +192,7 @@ const EditProfile = (props: any) => {
                         <Picker.Item label="Khác" value="Khác" />
                     </Picker>
                 </View>
+
 
                 <TouchableOpacity style={styles.inputContainer} onPress={() => setShowDatePicker(true)}>
                     <MaterialCommunityIcons name="calendar-month-outline" size={20} color="#333" />
@@ -148,6 +210,7 @@ const EditProfile = (props: any) => {
                         maximumDate={new Date()}
                     />
                 )}
+
             </View>
         </View>
     );
@@ -190,7 +253,6 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         color: '#333',
-        fontFamily: "Jost_400Regular",
         fontWeight: 'bold',
     },
     buttonheader: {
@@ -214,15 +276,11 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         marginTop: 10,
         paddingHorizontal: 15,
-        fontFamily: "Jost_400Regular",
-        fontWeight: 'bold',
     },
     input: {
         flex: 1,
         paddingVertical: 15,
         paddingLeft: 10,
-        fontFamily: "Jost_400Regular",
-        fontWeight: 'bold',
         fontSize: 16,
         color: '#333',
     },
@@ -230,9 +288,6 @@ const styles = StyleSheet.create({
         flex: 1,
         height: '100%',
         fontSize: 16,
-        
-        fontFamily: "Jost_400Regular",
-        fontWeight: 'bold',
         color: '#333',
     },
     image: {

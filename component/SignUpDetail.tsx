@@ -33,7 +33,7 @@ const SignUpDetail = (props: any) => {
     }
 
     try {
-      const response = await fetch('http://192.168.1.6:3000/signup', {
+      const response = await fetch('http://10.10.10.10:3000/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

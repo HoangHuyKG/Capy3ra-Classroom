@@ -24,10 +24,90 @@ mongoose.connect(process.env.MONGO_URI, {
 const UserSchema = new mongoose.Schema({
     fullname: String,
     email: String,
-    password: String // Lưu mật khẩu đã mã hóa
-});
+    password: String, // Lưu mật khẩu đã mã hóa
+    phoneNumber: { type: String }, // thêm
+    gender: { type: String },       // thêm
+    birthday: { type: Date },       // thêm
+    image: { type: String },  
+}, { timestamps: true });
 
 const User = mongoose.model('User', UserSchema);
+// Cấu hình upload cho hình ảnh
+const uploadImage = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'uploads/');
+        },
+        filename: (req, file, cb) => {
+            cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+        }
+    }),
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Vui lòng chọn tệp hình ảnh!'), false);
+        }
+        cb(null, true);
+    }
+});
+
+// API lấy thông tin user theo ID
+app.get('/user/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password'); // Không trả password
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng!' });
+        }
+
+        // Ensure image URL is fully formed
+        if (user.image) {
+            user.image = `${req.protocol}://${req.get('host')}${user.image}`;
+        }
+
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server!', error });
+    }
+});
+
+
+// API cập nhật thông tin người dùng và hình ảnh
+app.put('/user/:id', uploadImage.single('image'), async (req, res) => {
+    try {
+        const { fullname, email, phoneNumber, gender, birthday } = req.body;
+        let image = req.file ? `/uploads/${req.file.filename}` : undefined;  // Đường dẫn hình ảnh
+
+        // Cập nhật thông tin người dùng
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            {
+                $set: {
+                    fullname,
+                    email,
+                    phoneNumber,
+                    gender,
+                    birthday,
+                    image // Cập nhật hình ảnh
+                }
+            },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng!' });
+        }
+
+        // Đảm bảo URL hình ảnh là đầy đủ
+        if (updatedUser.image) {
+            updatedUser.image = `${req.protocol}://${req.get('host')}${updatedUser.image}`;
+        }
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error('Lỗi khi cập nhật thông tin người dùng:', error);
+        res.status(500).json({ message: 'Lỗi server!', error });
+    }
+});
+
 
 // API Đăng ký - Mã hóa mật khẩu trước khi lưu
 app.post('/signup', async (req, res) => {
@@ -87,6 +167,9 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Lỗi server!', error });
     }
 });
+
+
+
 
 const randomImages = [
     "https://picsum.photos/800/600?random=1",
@@ -675,5 +758,164 @@ app.get('/students/class/:classId', async (req, res) => {
         res.status(500).json({ message: "Lỗi server!" });
     }
 });
+const SubmissionSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+    exerciseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exercise', required: true },
+    filePath: { type: String, required: true },
+    submittedAt: { type: Date, default: Date.now },
+    score: { type: Number, default: null },
+    comment: { type: String, default: '' }
+});
+
+
+const Submission = mongoose.model('Submission', SubmissionSchema);
+
+
+// API nộp bài
+app.post('/submit-exercise', upload.single('file'), async (req, res) => {
+    try {
+        const { userId, classId, exerciseId } = req.body;
+        const file = req.file;
+
+        if (!userId || !classId || !exerciseId || !file) {
+            return res.status(400).json({ message: "Thiếu thông tin nộp bài!" });
+        }
+
+        const newSubmission = new Submission({
+            userId,
+            classId,
+            exerciseId,
+            filePath: file.path,
+            submittedAt: new Date()
+        });
+
+        await newSubmission.save();
+
+        res.status(201).json({ message: "Nộp bài thành công!", submission: newSubmission });
+    } catch (error) {
+        console.error("❌ Lỗi khi nộp bài:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+// API lấy danh sách file đã nộp theo userId và exerciseId
+app.get('/submitted-files', async (req, res) => {
+    try {
+        const { userId, exerciseId } = req.query;
+
+        if (!userId || !exerciseId) {
+            return res.status(400).json({ message: "Thiếu userId hoặc exerciseId!" });
+        }
+
+        const submissions = await Submission.find({ userId, exerciseId });
+
+        const files = submissions.map(sub => ({
+            _id: sub._id,
+            name: sub.filePath.split('\\').pop(),
+            url: sub.filePath,
+            score: sub.score,
+            comment: sub.comment
+        }));
+        
+        
+
+        res.status(200).json({ files });
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy file đã nộp:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+// API xoá file đã nộp
+app.delete('/delete-submission/:submissionId', async (req, res) => {
+    try {
+        const { submissionId } = req.params;
+
+        if (!submissionId) {
+            return res.status(400).json({ message: "Thiếu submissionId!" });
+        }
+
+        await Submission.findByIdAndDelete(submissionId);
+
+        res.status(200).json({ message: "Xóa bài nộp thành công!" });
+    } catch (error) {
+        console.error("❌ Lỗi khi xóa bài nộp:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+// API lấy danh sách học viên đã nộp bài theo exerciseId
+app.get('/exercise-submissions', async (req, res) => {
+    try {
+        const { exerciseId } = req.query;
+
+        if (!exerciseId) {
+            return res.status(400).json({ message: "Thiếu exerciseId!" });
+        }
+
+        // Tìm tất cả bài nộp và populate userId để lấy thông tin học viên
+        const submissions = await Submission.find({ exerciseId }).populate('userId');
+
+        const result = submissions.map(sub => ({
+            submissionId: sub._id,
+            userId: sub.userId._id,
+            fullname: sub.userId.fullname,
+            submittedAt: sub.submittedAt,
+            filePath: sub.filePath
+        }));
+
+        res.status(200).json({ submissions: result });
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy danh sách submissions:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+
+
+// GET /submission/:id
+app.get('/submission/:id', async (req, res) => {
+    try {
+      const submission = await Submission.findById(req.params.id).populate('userId');
+      if (!submission) {
+        return res.status(404).json({ message: 'Không tìm thấy submission' });
+      }
+  
+      res.status(200).json({
+        name: submission.userId.fullname,
+        filePath: submission.filePath,
+        submittedAt: submission.submittedAt,
+        score: submission.score,
+        comment: submission.comment,
+      });
+    } catch (error) {
+      console.error("Lỗi khi lấy submission:", error);
+      res.status(500).json({ message: 'Lỗi server' });
+    }
+  });
+  
+// API chấm điểm bài nộp
+app.put('/submission/:id/grade', async (req, res) => {
+    try {
+        const { score, comment } = req.body;
+
+        if (score === undefined) {
+            return res.status(400).json({ message: "Thiếu điểm chấm!" });
+        }
+
+        const updated = await Submission.findByIdAndUpdate(
+            req.params.id,
+            { score, comment },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ message: "Không tìm thấy bài nộp!" });
+        }
+
+        res.status(200).json({ message: "Chấm điểm thành công!", submission: updated });
+    } catch (error) {
+        console.error("❌ Lỗi khi chấm điểm:", error);
+        res.status(500).json({ message: "Lỗi server!" });
+    }
+});
+
 app.listen(3000, () => console.log('🚀 Server chạy trên cổng 3000'))
     .on("error", (err) => console.log("❌ Lỗi server:", err));

@@ -38,7 +38,7 @@ const GiveExercise = ({ navigation }) => {
     useEffect(() => {
         const fetchExercises = async () => {
             try {
-                const response = await axios.get(`http://192.168.1.6:3000/exercises/class/${classId}`);
+                const response = await axios.get(`http://10.10.10.10:3000/exercises/class/${classId}`);
                 setExercises(response.data); // Lưu danh sách bài tập vào state
             } catch (error) {
                 console.error("Lỗi khi lấy bài tập:", error);
@@ -49,7 +49,7 @@ const GiveExercise = ({ navigation }) => {
     }, [classId]); // Gọi lại khi classId thay đổi
     const fetchClassDetails = async () => {
         try {
-            const response = await axios.get(`http://192.168.1.6:3000/class/${classId}`);
+            const response = await axios.get(`http://10.10.10.10:3000/class/${classId}`);
             setClassData(response.data);
         } catch (error) {
             console.error("❌ Lỗi khi lấy dữ liệu lớp học:", error);
@@ -67,7 +67,7 @@ const GiveExercise = ({ navigation }) => {
 
     const handleDeleteExercise = async (id) => {
         try {
-            await axios.delete(`http://192.168.1.6:3000/exercises/${id}`);
+            await axios.delete(`http://10.10.10.10:3000/exercises/${id}`);
             setExercises(exercises.filter(exercise => exercise._id !== id)); // Cập nhật danh sách bài tập
             Toast.show({
                 type: 'success',

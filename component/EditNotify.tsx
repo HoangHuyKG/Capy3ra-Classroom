@@ -32,7 +32,7 @@ const EditNotifyScreen = (props: any) => {
 
   const fetchNotification = async () => {
     try {
-      const response = await axios.get(`http://192.168.1.6:3000/notifications/${notificationId}`);
+      const response = await axios.get(`http://10.10.10.10:3000/notifications/${notificationId}`);
       setNotification(response.data);
     } catch (error) {
       console.error("❌ Lỗi khi lấy thông báo:", error);
@@ -115,7 +115,7 @@ const EditNotifyScreen = (props: any) => {
       const keptOldFiles = (notification.fileUrl || []).filter(url => !removedOldFiles.includes(url));
       formData.append("keptOldFiles", JSON.stringify(keptOldFiles));
 
-      const response = await fetch(`http://192.168.1.6:3000/notifications/${notificationId}`, {
+      const response = await fetch(`http://10.10.10.10:3000/notifications/${notificationId}`, {
         method: "PUT",
         body: formData,
       });

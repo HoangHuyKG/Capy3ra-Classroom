@@ -71,7 +71,7 @@ const DetailExercise = () => {
         });
 
         try {
-            const response = await axios.post('http://192.168.1.6:3000/create-exercise', formData, {
+            const response = await axios.post('http://10.10.10.10:3000/create-exercise', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },

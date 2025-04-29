@@ -14,30 +14,55 @@ const EveryOneScreen = ({ navigation }) => {
   const [students, setStudents] = useState([]);
 
   useEffect(() => {
-    const fetchTeacher = async () => {
+    const fetchAllData = async () => {
       try {
-        const response = await axios.get(`http://192.168.1.6:3000/teacher/class/${classId}`);
-        setTeacher(response.data.teacher);
+        const teacherRes = await axios.get(`http://10.10.10.10:3000/teacher/class/${classId}`);
+        const fetchedTeacher = teacherRes.data.teacher;
+  
+        // Fetch avatar teacher
+        const teacherImage = await fetchTeacherAvatar(fetchedTeacher._id);
+        setTeacher({ ...fetchedTeacher, image: teacherImage });
+  
+        const studentsRes = await axios.get(`http://10.10.10.10:3000/students/class/${classId}`);
+        const fetchedStudents = studentsRes.data.students || [];
+  
+        // Fetch avatar students
+        const studentsWithImages = await Promise.all(
+          fetchedStudents.map(async (student) => {
+            const studentImage = await fetchStudentAvatar(student._id);
+            return { ...student, image: studentImage };
+          })
+        );
+  
+        setStudents(studentsWithImages);
       } catch (error) {
-        console.error("Lỗi khi lấy thông tin giảng viên:", error);
+        console.error('❌ Lỗi khi fetch dữ liệu lớp:', error);
+        setStudents([]);
       }
     };
-
-    const fetchStudents = async () => {
-      try {
-        const response = await axios.get(`http://192.168.1.6:3000/students/class/${classId}`);
-        setStudents(response.data.students || []);
-      } catch (error) {
-        // Không in lỗi ra console nữa
-        setStudents([]); // vẫn set mảng rỗng để UI hoạt động bình thường
-      }
-    };
-    
-
-    fetchTeacher();
-    fetchStudents();
+  
+    fetchAllData();
   }, [classId]);
-
+  
+  const fetchTeacherAvatar = async (teacherId) => {
+    try {
+      const response = await axios.get(`http://10.10.10.10:3000/user/${teacherId}`);
+      return response.data.image || null;
+    } catch (error) {
+      console.error('❌ Lỗi khi lấy avatar giáo viên:', error);
+      return null;
+    }
+  };
+  const fetchStudentAvatar = async (studentId) => {
+    try {
+      const response = await axios.get(`http://10.10.10.10:3000/user/${studentId}`);
+      return response.data.image || null;
+    } catch (error) {
+      console.error('❌ Lỗi khi lấy avatar học viên:', error);
+      return null;
+    }
+  };
+    
   return (
     <View style={styles.container}>
       <Header />
@@ -47,7 +72,15 @@ const EveryOneScreen = ({ navigation }) => {
         <Text style={styles.title}>Giáo viên</Text>
         {teacher ? (
           <View style={styles.row}>
-            <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
+            <Image
+  style={styles.imageuser}
+  source={
+    teacher?.image
+      ? { uri: teacher.image }
+      : require("../assets/images/usernobackgr.png")
+  }
+/>
+
             <Text style={styles.userName}>{teacher.fullname}</Text>
           </View>
         ) : (
@@ -64,7 +97,15 @@ const EveryOneScreen = ({ navigation }) => {
             keyExtractor={(item) => item._id} // Sử dụng _id của học viên
             renderItem={({ item }) => (
               <View style={styles.row}>
-                <Image style={styles.imageuser} source={require("../assets/images/usernobackgr.png")} />
+                <Image
+  style={styles.imageuser}
+  source={
+    item?.image
+      ? { uri: item.image }
+      : require("../assets/images/usernobackgr.png")
+  }
+/>
+
                 <Text style={styles.userName}>{item.fullname}</Text>
               </View>
             )}

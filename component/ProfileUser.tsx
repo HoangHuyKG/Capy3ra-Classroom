@@ -1,53 +1,99 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native'; // Hook để lấy navigation
+import { useNavigation } from '@react-navigation/native'; 
 import Header from './Header';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import axios from 'axios'; // thêm axios
 
 const ProfileSettingsScreen = () => {
-  const navigation = useNavigation(); // Dùng hook useNavigation
-  const [user, setUser] = useState({ fullname: "Tên người dùng", email: "Email" });
+  const navigation = useNavigation();
+  const [user, setUser] = useState<any>({
+    fullname: "Tên người dùng",
+    email: "Email",
+    image: null,
+    _id: "",
+  });
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('user');
-        if (userData) {
-          setUser(JSON.parse(userData));
-        }
-      } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu user:", error);
-      }
-    };
-    fetchUserData();
+    getUserIdFromStorage();
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserInfo();
+    }
+
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (userId) {
+        fetchUserInfo();
+      }
+    });
+
+    return unsubscribe;
+  }, [userId]);
+
+  const getUserIdFromStorage = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        const userObj = JSON.parse(userData);
+        setUserId(userObj._id);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy userId từ AsyncStorage:", error);
+    }
+  };
+
+  const fetchUserInfo = async () => {
+    try {
+      const response = await axios.get(`http://10.10.10.10:3000/user/${userId}`);
+      const userData = response.data;
+      if (userData) {
+        setUser(userData); // Cập nhật đầy đủ user mới nhất từ server
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải thông tin user:", error);
+    }
+  };
 
   return (
     <View style={styles.containersmall}>
       <Header />
 
       <View style={styles.box}>
-        <Image style={styles.avatar} source={require("../assets/images/usernobackgr.png")} />
+        <Image
+          style={styles.avatar}
+          source={
+            user.image
+              ? { uri: user.image }
+              : require("../assets/images/usernobackgr.png")
+          }
+        />
         <Text style={styles.name}>{user.fullname}</Text>
         <Text style={styles.email}>{user.email}</Text>
 
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('EditProfile')}>
-          <MaterialCommunityIcons name="account-edit-outline" size={25} color="#333" />
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate('EditProfile', { userId: user._id })}
+          >
+            <MaterialCommunityIcons name="account-edit-outline" size={25} color="#333" />
             <Text style={styles.rowText}>Chỉnh sửa thông tin</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={styles.row}>
-          <MaterialCommunityIcons name="help-circle-outline" size={25} color="#333" />
+            <MaterialCommunityIcons name="help-circle-outline" size={25} color="#333" />
             <Text style={styles.rowText}>Trợ giúp</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.row}
             onPress={async () => {
-              await AsyncStorage.removeItem('token'); // Xóa token đã lưu trong AsyncStorage
-              await AsyncStorage.removeItem('user');  // Xóa thông tin user đã lưu
-              navigation.navigate('LoginDetail'); // Chuyển hướng người dùng về màn hình đăng nhập
+              await AsyncStorage.removeItem('token');
+              await AsyncStorage.removeItem('user');
+              navigation.navigate('LoginDetail');
             }}
           >
             <MaterialCommunityIcons name="logout" size={25} color="#E53935" />
